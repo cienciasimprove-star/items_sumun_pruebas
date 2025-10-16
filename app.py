@@ -1388,7 +1388,7 @@ def main():
         contexto_general_estacion = ""
         with st.expander("📝 Opcional: Generar un contexto general para la estación"):
             
-            # Inicializamos la variable de estado principal si no existe
+            # 1. Inicializamos la variable de estado principal si no existe. Esta será nuestra ÚNICA fuente de verdad.
             if 'generated_context' not in st.session_state:
                 st.session_state.generated_context = ""
             if 'show_context_refinement' not in st.session_state:
@@ -1410,20 +1410,21 @@ def main():
                     with st.spinner("Generando contexto..."):
                         contexto_sugerido = generar_contexto_general_con_llm(gen_model_name, grado_seleccionado, area_seleccionada, asignatura_seleccionada, estacion_seleccionada, tipo_contexto=tipo_contexto_final, idea_usuario=idea_usuario_ctx)
                         if contexto_sugerido:
+                            # Al generar, actualizamos directamente nuestra única variable de estado.
                             st.session_state.generated_context = contexto_sugerido
                             st.session_state.show_context_refinement = False
                             st.rerun()
         
-            # --- EDICIÓN Y REFINAMIENTO (NUEVA LÓGICA) ---
+            # --- EDICIÓN Y REFINAMIENTO (LÓGICA SIMPLIFICADA) ---
             if st.session_state.generated_context:
                 st.markdown("---")
                 st.markdown("##### Contexto Generado (puedes editarlo directamente):")
                 
-                # CAMBIO #1: El valor del widget se toma del estado principal, pero su clave es diferente.
+                # CAMBIO CLAVE #1: El widget ahora usa la misma clave que nuestra variable de estado.
+                # Cualquier edición del usuario actualizará AUTOMÁTICAMENTE st.session_state.generated_context.
                 st.text_area(
                     "Contexto generado",
-                    value=st.session_state.generated_context, 
-                    key="contexto_widget_editable", # Clave separada para el widget
+                    key="generated_context",  # Esta es la clave unificada
                     height=200,
                     label_visibility="collapsed"
                 )
@@ -1438,8 +1439,9 @@ def main():
                         submitted = st.form_submit_button("🔄 Refinar con estas Observaciones")
                         
                         if submitted and feedback_ctx:
-                            # CAMBIO #2: Leemos el texto que el usuario editó desde la clave del WIDGET.
-                            contexto_base_actual = st.session_state.contexto_widget_editable
+                            # CAMBIO CLAVE #2: Leemos directamente del estado principal, que gracias al
+                            # cambio #1, ya contiene las ediciones manuales del usuario.
+                            contexto_base_actual = st.session_state.generated_context
                             
                             with st.spinner("Refinando contexto con tu feedback..."):
                                 contexto_refinado = refinar_contexto_con_llm(
@@ -1449,14 +1451,15 @@ def main():
                                 )
                                 
                                 if contexto_refinado:
-                                    # CAMBIO #3: Actualizamos nuestro ESTADO PRINCIPAL. Esto es permitido.
+                                    # CAMBIO CLAVE #3: Solo necesitamos actualizar nuestra única variable.
+                                    # El widget se actualizará solo en el rerun.
                                     st.session_state.generated_context = contexto_refinado
                                     st.session_state.show_context_refinement = False
-                                    st.rerun() # Al recargar, el widget tomará el nuevo valor del estado principal.
+                                    st.rerun()
                                 else:
                                     st.error("No se pudo refinar el contexto.")
         
-            # La variable final simplemente lee el estado principal
+            # La variable final simplemente lee el estado principal, que siempre está actualizado.
             contexto_general_estacion = st.session_state.get('generated_context', "").strip()
 
 
