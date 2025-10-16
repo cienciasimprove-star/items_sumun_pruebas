@@ -1453,10 +1453,16 @@ def main():
                 # Actualizamos el estado con la edición manual del usuario
                 st.session_state['generated_context'] = edited_context
                 
-                # Botón para mostrar/ocultar el formulario de refinamiento
                 if st.button("✍️ Refinar Contexto con Feedback", key="btn_show_refine_ctx"):
-                    st.session_state['show_context_refinement'] = not st.session_state.get('show_context_refinement', False)
-        
+                    # Hacemos el cambio de estado de forma más explícita
+                    if 'show_context_refinement' not in st.session_state:
+                        st.session_state.show_context_refinement = True
+                    else:
+                        st.session_state.show_context_refinement = not st.session_state.show_context_refinement
+                    
+                    # Forzamos un rerun para asegurar que la app se actualice
+                    st.rerun()
+                       
                 # Formulario de refinamiento
                 if st.session_state['show_context_refinement']:
                     with st.form("refine_context_form"):
@@ -1820,11 +1826,17 @@ def main():
                                 st.session_state['show_feedback_form'] = False
                                 st.session_state['item_under_review'] = None
                                 st.rerun()
-            
+                                
                         with col_rechazo:
                             if st.button("✍️ Refinar con Feedback", key=f"refine_{current_index}", use_container_width=True):
-                                st.session_state['show_feedback_form'] = not st.session_state.get('show_feedback_form', False)
-                                # No es necesario un rerun explícito, el cambio de estado lo provoca
+                                # Hacemos el cambio de estado de forma más explícita
+                                if 'show_feedback_form' not in st.session_state:
+                                    st.session_state.show_feedback_form = True
+                                else:
+                                    st.session_state.show_feedback_form = not st.session_state.show_feedback_form
+                                
+                                # Forzamos un rerun para asegurar que la app se actualice con el nuevo estado
+                                st.rerun()            
             
                         with col_descartar:
                             if st.button("👎 Descartar Ítem", key=f"discard_{current_index}", use_container_width=True):
