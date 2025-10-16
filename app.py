@@ -1464,18 +1464,32 @@ def main():
                     st.rerun()
                        
                 # Formulario de refinamiento
-                if st.session_state['show_context_refinement']:
+                if st.session_state.get('show_context_refinement', False):
                     with st.form("refine_context_form"):
-                        feedback_ctx = st.text_area("Escribe tus observaciones para refinar:", key="ctx_feedback")
+                        feedback_ctx = st.text_area("Escribe tus observaciones para refinar:", key="ctx_feedback",
+                                                    placeholder="Ej: Hazlo más corto y enfócate en el siglo XIX.")
                         submitted = st.form_submit_button("🔄 Refinar con estas Observaciones")
-        
+                
                         if submitted and feedback_ctx:
+                            # Capturamos el texto que está actualmente en el área de edición (ctx_edited_final)
+                            # Este es el contexto base que el usuario ve y quiere refinar.
+                            contexto_base_actual = st.session_state.get('ctx_edited_final', st.session_state.get('generated_context', ''))
+                            
                             with st.spinner("Refinando contexto con tu feedback..."):
                                 contexto_refinado = refinar_contexto_con_llm(
                                     gen_model_name,
-                                    contexto_original=st.session_state['generated_context'],
+                                    # Usamos el texto visible como base para la refinación.
+                                    contexto_original=contexto_base_actual,
                                     feedback_usuario=feedback_ctx
                                 )
+                                if contexto_refinado:
+                                    st.session_state['generated_context'] = contexto_refinado
+                                    st.session_state['show_context_refinement'] = False
+                                    st.rerun()
+                                else:
+                                    st.error("No se pudo refinar el contexto.")
+
+
                                 if contexto_refinado:
                                     st.session_state['generated_context'] = contexto_refinado
                                     st.session_state['show_context_refinement'] = False
@@ -1861,23 +1875,42 @@ def main():
                                     key="feedback_text"
                                 )
                                 submitted = st.form_submit_button("🔄 Refinar con estas Observaciones")
-            
+                        
                                 if submitted and feedback_usuario:
-                                    with st.spinner("🧠 Refinando el ítem con tu feedback..."):
-                                        classif_norm = normaliza_claves_classif(item_to_review.get('classification', {}))
-                                
-                                        refined_item_data = generar_pregunta_con_seleccion(
-                                            gen_model_name=st.session_state.gen_vertex_name,
-                                            audit_model_name=st.session_state.audit_vertex_name,
-                                            fila_datos=classif_norm,
-                                            criterios_generacion={
-                                                "tipo_pregunta": "opción múltiple con 4 opciones", "dificultad": "media",
-                                                "contexto_educativo": "estudiantes Colombianos entre 10 y 17 años"
-                                            },
-                                            manual_reglas_texto=manual_reglas_texto,
-                                            feedback_usuario=feedback_usuario,
-                                            item_a_refinar_text=item_to_review['item_text']
-                                        )
+                                    # 1. Recuperamos el ítem actual desde el session_state AHORA MISMO.
+                                    item_actual_para_refinar = st.session_state.get('item_under_review')
+                        
+                                    # 2. Verificamos que el ítem realmente existe antes de continuar.
+                                    if item_actual_para_refinar and 'item_text' in item_actual_para_refinar:
+                                        with st.spinner("🧠 Refinando el ítem con tu feedback..."):
+                                            classif_norm = normaliza_claves_classif(item_actual_para_refinar.get('classification', {}))
+                                            
+                                            # 3. Llamamos a la función con los datos correctos y verificados.
+                                            refined_item_data = generar_pregunta_con_seleccion(
+                                                gen_model_name=st.session_state.gen_vertex_name,
+                                                audit_model_name=st.session_state.audit_vertex_name,
+                                                fila_datos=classif_norm,
+                                                criterios_generacion={
+                                                    "tipo_pregunta": "opción múltiple con 4 opciones", "dificultad": "media",
+                                                    "contexto_educativo": "estudiantes Colombianos entre 10 y 17 años"
+                                                },
+                                                manual_reglas_texto=manual_reglas_texto,
+                                                feedback_usuario=feedback_usuario,
+                                                # Usamos el texto del ítem que acabamos de recuperar.
+                                                item_a_refinar_text=item_actual_para_refinar['item_text']
+                                            )
+                        
+                                            if refined_item_data:
+                                                st.session_state['item_under_review'] = refined_item_data
+                                                st.session_state['show_feedback_form'] = False
+                                                st.success("¡Ítem refinado! Por favor, revísalo de nuevo.")
+                                                st.rerun()
+                                            else:
+                                                st.error("Fallo al refinar el ítem. Intenta de nuevo o ajusta tu feedback.")
+                                    else:
+                                        # Si por alguna razón el ítem se perdió, informamos al usuario.
+                                        st.error("Error de estado: No se encontró el ítem a refinar. Por favor, descarte este ítem y genere uno nuevo.")
+
                                     
                                     if refined_item_data:
                                         # Reemplazamos el ítem en revisión con la versión refinada
