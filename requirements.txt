@@ -1,0 +1,34 @@
+# Interfaz y App Principal
+streamlit
+streamlit-lottie
+
+# Datos y Cloud
+pandas
+google-cloud-storage
+google-cloud-aiplatform>=1.56.0
+
+# Inteligencia Artificial (LangChain)
+langchain
+langchain-google-genai
+langchain-google-vertexai
+langchain_openai
+openai
+
+# Manejo de Archivos
+openpyxl
+PyPDF2
+python-docx
+xlsxwriter
+
+# Visualización y Gráficos
+graphviz
+matplotlib
+matplotlib-venn
+networkx
+numpy
+pydot
+pywaffle
+requests
+seaborn
+shapely
+python-dotenv
