@@ -1385,102 +1385,92 @@ def main():
         # --- CÓDIGO DE REEMPLAZO ---
         
         # --- Lógica de Contexto General (Opcional y Corregida) ---
+        # --- Lógica de Contexto General (Opcional y Corregida Definitivamente) ---
         contexto_general_estacion = ""
         with st.expander("📝 Opcional: Generar un contexto general para la estación"):
             
             # Inicializamos las variables de estado si no existen
             if 'generated_context' not in st.session_state:
-                st.session_state['generated_context'] = ""
+                st.session_state.generated_context = ""
             if 'show_context_refinement' not in st.session_state:
-                st.session_state['show_context_refinement'] = False
+                st.session_state.show_context_refinement = False
         
-            # --- 1. SELECCIÓN DE CATEGORÍAS ---
+            # --- WIDGETS DE SELECCIÓN (Sin cambios) ---
+            # ... (el código de selectbox, text_area para la idea y el botón de generar se mantiene igual) ...
             categorias_contexto = [
                 "No usar contexto general", "Contexto Escolar", "Contexto Cotidiano", "Contexto Científico",
                 "Contexto Histórico", "Contexto Literario", "Contexto Político/Social", "Contexto Tecnológico",
                 "Fragmento para Lectura", "Otro..."
             ]
             categoria_elegida = st.selectbox("Elige un tipo de contexto:", categorias_contexto, key="ctx_categoria")
-            
             tipo_contexto_final = categoria_elegida
             if categoria_elegida == "Fragmento para Lectura":
                 tipos_fragmento = ["Crónica", "Noticia", "Entrevista", "Ensayo", "Cuento Corto", "Manual"]
                 tipo_contexto_final = st.selectbox("Elige el tipo de fragmento:", tipos_fragmento, key="ctx_fragmento")
             elif categoria_elegida == "Otro...":
                 tipo_contexto_final = st.text_input("Especifica el tipo de contexto que deseas:", key="ctx_otro", placeholder="Ej: Contexto mitológico griego")
-        
-            idea_usuario_ctx = st.text_area(
-                "Opcional: Da una idea o borrador para guiar a la IA en la generación del contexto.",
-                key="ctx_idea",
-                placeholder="Ej: Un equipo de biólogos marinos descubre una nueva especie..."
-            )
-        
-            # --- 2. BOTÓN DE GENERACIÓN ---
+            idea_usuario_ctx = st.text_area("Opcional: Da una idea o borrador para guiar a la IA...", key="ctx_idea")
             if categoria_elegida != "No usar contexto general":
                 if st.button("🧠 Generar Contexto con IA", key="btn_gen_ctx"):
                     with st.spinner("Generando contexto..."):
-                        contexto_sugerido = generar_contexto_general_con_llm(
-                            gen_model_name,
-                            grado_seleccionado, area_seleccionada, asignatura_seleccionada, estacion_seleccionada,
-                            tipo_contexto=tipo_contexto_final,
-                            idea_usuario=idea_usuario_ctx
-                        )
+                        contexto_sugerido = generar_contexto_general_con_llm(gen_model_name, grado_seleccionado, area_seleccionada, asignatura_seleccionada, estacion_seleccionada, tipo_contexto=tipo_contexto_final, idea_usuario=idea_usuario_ctx)
                         if contexto_sugerido:
-                            st.session_state['generated_context'] = contexto_sugerido
-                            st.session_state['show_context_refinement'] = False # Oculta el formulario de refinar
+                            st.session_state.generated_context = contexto_sugerido
+                            st.session_state.show_context_refinement = False
                             st.rerun()
         
-            # --- 3. EDICIÓN Y REFINAMIENTO DEL CONTEXTO GENERADO ---
-            if st.session_state['generated_context']:
+            # --- EDICIÓN Y REFINAMIENTO (NUEVA LÓGICA) ---
+            if st.session_state.generated_context:
                 st.markdown("---")
                 st.markdown("##### Contexto Generado (puedes editarlo directamente):")
                 
-                # El área de texto donde editas está FUERA del formulario.
-                # Su valor se guarda en 'st.session_state.ctx_edited_final'
-                edited_context = st.text_area(
+                # 1. El text_area ahora usa 'generated_context' como su clave.
+                #    Esto lo convierte en la única fuente de la verdad.
+                st.text_area(
                     "Contexto generado",
-                    value=st.session_state['generated_context'],
+                    key="generated_context", # ¡ESTE ES EL CAMBIO CLAVE!
                     height=200,
-                    key="ctx_edited_final",  # Esta clave es fundamental
                     label_visibility="collapsed"
                 )
-                # Sincronizamos el valor editado con el estado principal del contexto
-                st.session_state['generated_context'] = edited_context
                 
-                # Botón para mostrar/ocultar el formulario de feedback
+                # Botón para mostrar/ocultar el formulario
                 if st.button("✍️ Refinar Contexto con Feedback", key="btn_show_refine_ctx"):
                     st.session_state.show_context_refinement = not st.session_state.get('show_context_refinement', False)
                     st.rerun()
         
-                # El formulario ahora SOLO contiene el feedback y el botón de envío
+                # El formulario para el feedback
                 if st.session_state.get('show_context_refinement', False):
                     with st.form("refine_context_form"):
-                        feedback_ctx = st.text_area(
-                            "Escribe tus observaciones para refinar:", 
-                            key="ctx_feedback",
-                            placeholder="Ej: Hazlo más corto y enfócate en el siglo XIX."
-                        )
+                        feedback_ctx = st.text_area("Escribe tus observaciones para refinar:", key="ctx_feedback")
                         submitted = st.form_submit_button("🔄 Refinar con estas Observaciones")
                         
                         if submitted and feedback_ctx:
-                            # Al enviar, leemos el valor más reciente del contexto desde la memoria (session_state)
-                            contexto_base_actual = st.session_state.get('ctx_edited_final', '')
+                            # 2. Leemos el contexto DIRECTAMENTE de la fuente de la verdad.
+                            contexto_base_actual = st.session_state.generated_context
                             
+                            # --- LÍNEAS DE DEPURACIÓN ---
+                            st.warning(f"**DEPURACIÓN:** Se enviará el siguiente texto a la IA para refinarlo:")
+                            st.text(contexto_base_actual)
+                            st.warning(f"**DEPURACIÓN:** Con el siguiente feedback:")
+                            st.text(feedback_ctx)
+                            # ----------------------------
+        
                             with st.spinner("Refinando contexto con tu feedback..."):
                                 contexto_refinado = refinar_contexto_con_llm(
                                     gen_model_name,
-                                    contexto_original=contexto_base_actual,
+                                    contexto_original=contexto_base_actual, # Usamos la variable verificada
                                     feedback_usuario=feedback_ctx
                                 )
                                 
                                 if contexto_refinado:
-                                    st.session_state['generated_context'] = contexto_refinado
-                                    st.session_state['show_context_refinement'] = False
+                                    # 3. Actualizamos la única fuente de la verdad con el resultado.
+                                    st.session_state.generated_context = contexto_refinado
+                                    st.session_state.show_context_refinement = False
                                     st.rerun()
                                 else:
                                     st.error("No se pudo refinar el contexto.")
         
-            # El contexto final que se usará en las preguntas es el que esté en el estado de la sesión
+            # La variable final simplemente lee el estado
             contexto_general_estacion = st.session_state.get('generated_context', "").strip()        
 
 
