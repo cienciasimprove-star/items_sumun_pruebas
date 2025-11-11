@@ -127,6 +127,93 @@ def describir_imagen_con_llm(model_name, image_bytes, file_type):
         return None
 
 
+def extraer_texto_pdf(pdf_bytes):
+    """Extrae texto de un PDF en bytes."""
+    try:
+        texto_pdf = ""
+        reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
+        for page in reader.pages:
+            texto_pdf += (page.extract_text() or "") + "\n\n" # Añadir espacio entre páginas
+        return texto_pdf
+    except Exception as e:
+        st.error(f"Error al leer el PDF: {e}")
+        return None
+
+def crear_indice_vectorial(chunks):
+    """
+    Convierte una lista de textos (chunks) en vectores y los devuelve
+    como una lista de tuplas (texto, vector).
+    """
+    try:
+        # Modelo de embedding. 'text-embedding-004' es el más nuevo
+        model = TextEmbeddingModel.from_pretrained("text-embedding-004")
+        
+        # Los modelos tienen un límite de cuántos chunks puedes enviar a la vez.
+        # Procesamos en lotes de 250 para estar seguros.
+        batch_size = 250
+        index = []
+
+        for i in range(0, len(chunks), batch_size):
+            batch_chunks = chunks[i:i + batch_size]
+            
+            # Obtenemos los embeddings para el lote
+            embeddings = model.get_embeddings(batch_chunks)
+            
+            # Guardamos cada chunk con su embedding
+            for chunk, embedding in zip(batch_chunks, embeddings):
+                index.append((chunk, np.array(embedding.values)))
+        
+        return index
+    
+    except Exception as e:
+        st.error(f"Error al crear vectores (Embeddings): {e}")
+        return []
+
+def buscar_en_indice(query_text, k=3):
+    """
+    Busca en el índice de sesión los k chunks más relevantes para un texto.
+    Devuelve una lista de los textos (chunks) encontrados.
+    """
+    if 'pdf_index' not in st.session_state or not st.session_state['pdf_index']:
+        return [] # No hay índice cargado
+
+    index = st.session_state['pdf_index']
+    
+    try:
+        # 1. Vectorizar la consulta (la microhabilidad)
+        model = TextEmbeddingModel.from_pretrained("text-embedding-004")
+        query_vector = np.array(model.get_embeddings([query_text])[0].values)
+        
+        # 2. Calcular similitud (Coseno)
+        # Preparamos los vectores del índice
+        chunk_vectors = np.array([item[1] for item in index])
+        
+        # Normalizamos vectores
+        query_norm = np.linalg.norm(query_vector)
+        chunk_norms = np.linalg.norm(chunk_vectors, axis=1)
+        
+        # Evitar división por cero si hay vectores nulos
+        if query_norm == 0 or np.any(chunk_norms == 0):
+            return []
+            
+        # Calculamos la similitud del coseno
+        # (A . B) / (||A|| * ||B||)
+        similitudes = np.dot(chunk_vectors, query_vector) / (chunk_norms * query_norm)
+        
+        # 3. Obtener los Top K
+        # `np.argsort` da los índices de menor a mayor. Usamos `[-k:]` para los k más altos
+        # y `[::-1]` para invertirlos (del más al menos relevante).
+        top_k_indices = np.argsort(similitudes)[-k:][::-1]
+        
+        # 4. Devolver los textos de esos chunks
+        relevant_chunks = [index[i][0] for i in top_k_indices]
+        return relevant_chunks
+
+    except Exception as e:
+        st.warning(f"Error al buscar en el índice del PDF: {e}")
+            return []
+    
+
 # --- FUNCIÓN PRINCIPAL QUE ENVUELVE TODA LA APP ---
 def main():
     # --- CONFIGURACIÓN DE LA PÁGINA DE STREAMLIT ---
