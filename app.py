@@ -1323,10 +1323,8 @@ def main():
         df_filtrado_area = df_filtrado_grado[df_filtrado_grado['ÁREA'].astype(str).str.upper() == str(area_seleccionada).upper()]
         all_asignaturas = df_filtrado_area['ASIGNATURA'].dropna().unique().tolist()
         asignatura_seleccionada = st.selectbox("Asignatura", sorted(all_asignaturas), key="asignatura_sel")
-
         df_filtrado_asignatura = df_filtrado_area[df_filtrado_area['ASIGNATURA'].astype(str).str.upper() == str(asignatura_seleccionada).upper()]
-         
-        # --- INICIO DE LA MODIFICACIÓN ---
+        # --- INICIO DE LA MODIFICACIÓN ---
         # Cambiamos 'macrohabilidad' por 'MACROHABILIDAD'
         all_macrohabilidades = df_filtrado_asignatura['MACROHABILIDAD'].dropna().unique().tolist()
         macrohabilidad_seleccionada = st.selectbox("Macrohabilidad", sorted(all_macrohabilidades), key="macrohabilidad_sel")
