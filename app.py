@@ -19,6 +19,9 @@ from graficos_plugins import generar_grafico_desde_texto
 from docx.shared import Inches
 import random
 from dotenv import load_dotenv
+import numpy as np
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from vertexai.language_models import TextEmbeddingModel # Para los embeddings
 
 
 def parse_json_llm(s: str):
@@ -1299,6 +1302,49 @@ def main():
             st.sidebar.warning(f"Manual truncado a {max_manual_length} caracteres.")
             manual_reglas_texto = manual_reglas_texto[:max_manual_length]
         st.sidebar.info(f"Manual de reglas cargado ({len(manual_reglas_texto)} caracteres).")
+
+    # --- AÑADIR ESTE BLOQUE ---
+    st.sidebar.markdown("---")
+    st.sidebar.header("Recurso Opcional (Libro)")
+    
+    # Variable de sesión para el nombre del libro
+    if 'processed_pdf_name' not in st.session_state:
+        st.session_state.processed_pdf_name = None
+
+    pdf_itinerario = st.sidebar.file_uploader("Subir PDF del Itinerario/Libro", type="pdf")
+
+    if pdf_itinerario:
+        # Si se sube un nuevo libro O es un libro diferente al procesado
+        if pdf_itinerario.name != st.session_state.processed_pdf_name:
+            with st.sidebar.spinner(f"Procesando '{pdf_itinerario.name}'... Esto puede tardar unos minutos."):
+                
+                # 1. Borramos el índice viejo (si existe)
+                if 'pdf_index' in st.session_state:
+                    del st.session_state['pdf_index']
+                
+                # 2. Procesamos el nuevo libro
+                pdf_bytes = pdf_itinerario.getvalue()
+                texto_completo = extraer_texto_pdf(pdf_bytes)
+                
+                if texto_completo:
+                    # 3. Dividir (Chunking)
+                    text_splitter = RecursiveCharacterTextSplitter(
+                        chunk_size=1000, # 1000 caracteres por pedazo
+                        chunk_overlap=100  # 100 caracteres de superposición
+                    )
+                    chunks = text_splitter.split_text(texto_completo)
+                    
+                    # 4. Vectorizar (Embedding) y almacenar
+                    st.session_state['pdf_index'] = crear_indice_vectorial(chunks)
+                    st.session_state.processed_pdf_name = pdf_itinerario.name
+                    st.sidebar.success(f"Libro '{pdf_itinerario.name}' procesado. {len(chunks)} secciones indexadas.")
+                else:
+                    st.sidebar.error("El PDF está vacío o no se pudo leer.")
+        
+        # Si el libro es el mismo que ya está cargado, no hacemos nada
+        # y solo mostramos el mensaje de éxito.
+        elif 'pdf_index' in st.session_state:
+             st.sidebar.success(f"Libro '{pdf_itinerario.name}' listo.")
 
     # 2. Lógica de Generación y Auditoría de Ítems
     st.header("Generación y Auditoría de Ítems.")
