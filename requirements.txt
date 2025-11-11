@@ -21,6 +21,7 @@ openpyxl
 PyPDF2
 python-docx
 xlsxwriter
+pymupdf
 
 # Visualización y Gráficos
 graphviz
