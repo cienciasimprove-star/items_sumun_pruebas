@@ -81,7 +81,7 @@ def crear_indice_vectorial(chunks):
         
         # Los modelos tienen un límite de cuántos chunks puedes enviar a la vez.
         # Procesamos en lotes de 250 para estar seguros.
-        batch_size = 250
+        batch_size = 100
         index = []
 
         for i in range(0, len(chunks), batch_size):
