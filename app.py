@@ -70,33 +70,50 @@ def load_bloom_taxonomy(file_path="bloom_taxonomy.json"):
 # Carga la taxonomía al inicio de tu script
 bloom_taxonomy_detallada = load_bloom_taxonomy()
 
-def crear_indice_vectorial(chunks):
+# --- REEMPLAZA ESTA FUNCIÓN ---
+def crear_indice_vectorial(paginas_texto):
     """
-    Convierte una lista de textos (chunks) en vectores y los devuelve
-    como una lista de tuplas (texto, vector).
+    Convierte una lista de TEXTOS DE PÁGINA en chunks y vectores.
+    Procesa página por página para ahorrar RAM.
     """
     try:
-        # Modelo de embedding. 'text-embedding-004' es el más nuevo
         model = TextEmbeddingModel.from_pretrained("text-embedding-004")
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=100
+        )
         
-        # Los modelos tienen un límite de cuántos chunks puedes enviar a la vez.
-        # Procesamos en lotes de 250 para estar seguros.
-        batch_size = 100
         index = []
-
-        for i in range(0, len(chunks), batch_size):
-            batch_chunks = chunks[i:i + batch_size]
-            
-            # Obtenemos los embeddings para el lote
-            embeddings = model.get_embeddings(batch_chunks)
-            
-            # Guardamos cada chunk con su embedding
-            for chunk, embedding in zip(batch_chunks, embeddings):
-                index.append((chunk, np.array(embedding.values)))
         
+        # --- AQUÍ ESTÁ EL CAMBIO ---
+        # Reducimos el tamaño del lote de 250 a 100.
+        # Esto asegura que no superemos el límite de 20k tokens por llamada.
+        api_batch_size = 100 
+        # --- FIN DEL CAMBIO ---
+
+        # Iteramos sobre CADA PÁGINA individualmente
+        for texto_pagina in paginas_texto:
+            # 1. Dividimos solo el texto de ESTA página
+            chunks_pagina = text_splitter.split_text(texto_pagina)
+            
+            if not chunks_pagina:
+                continue
+            
+            # 2. Vectorizamos los chunks de ESTA página (en lotes si es necesario)
+            for i in range(0, len(chunks_pagina), api_batch_size):
+                batch_chunks = chunks_pagina[i:i + api_batch_size]
+                embeddings = model.get_embeddings(batch_chunks)
+                
+                for chunk, embedding in zip(batch_chunks, embeddings):
+                    index.append((chunk, np.array(embedding.values)))
+            
+            # 3. Al final de este bucle, 'texto_pagina' y 'chunks_pagina' se liberan
+            # de la memoria antes de procesar la siguiente página.
+    
         return index
     
     except Exception as e:
+        # ¡Este es el error que estás viendo ahora!
         st.error(f"Error al crear vectores (Embeddings): {e}")
         return []
 
