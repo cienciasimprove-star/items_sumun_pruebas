@@ -1278,53 +1278,54 @@ def main():
         return buffer
 
     # --- LÓGICA PRINCIPAL DE LA APLICACIÓN ---
-    
-    # 1. Carga de datos desde Google Cloud Storage
-    GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME") 
-    GCS_EXCEL_PATH = os.environ.get("GCS_EXCEL_PATH")
-    GCS_PDF_PATH = os.environ.get("GCS_PDF_PATH")
+     
+    # 1. Carga de datos desde Google Cloud Storage
+    GCS_BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME") 
+    GCS_EXCEL_PATH = os.environ.get("GCS_EXCEL_PATH")
+    GCS_PDF_PATH = os.environ.get("GCS_PDF_PATH")
 
-    st.sidebar.header("Fuente de Datos (GCS)")
-    
-    df_datos = None
-    manual_reglas_texto = ""
+    st.sidebar.header("Fuente de Datos (GCS)")
+     
+    df_datos = None
+    manual_reglas_texto = ""
 
-    if GCS_BUCKET_NAME and GCS_EXCEL_PATH:
-        df_datos = leer_excel_desde_gcs(GCS_BUCKET_NAME, GCS_EXCEL_PATH)
-    else:
-        st.sidebar.error("Variables de entorno para GCS no configuradas.")
-        st.info("La aplicación requiere GCS_BUCKET_NAME y GCS_EXCEL_PATH para cargar los datos.")
-        st.stop()
+    if GCS_BUCKET_NAME and GCS_EXCEL_PATH:
+        df_datos = leer_excel_desde_gcs(GCS_BUCKET_NAME, GCS_EXCEL_PATH)
+    else:
+        st.sidebar.error("Variables de entorno para GCS no configuradas.")
+        st.info("La aplicación requiere GCS_BUCKET_NAME y GCS_EXCEL_PATH para cargar los datos.")
+        st.stop()
 
-    if GCS_BUCKET_NAME and GCS_PDF_PATH:
-        manual_reglas_texto = leer_pdf_desde_gcs(GCS_BUCKET_NAME, GCS_PDF_PATH)
-        max_manual_length = 15000
-        if len(manual_reglas_texto) > max_manual_length:
-            st.sidebar.warning(f"Manual truncado a {max_manual_length} caracteres.")
-            manual_reglas_texto = manual_reglas_texto[:max_manual_length]
-        st.sidebar.info(f"Manual de reglas cargado ({len(manual_reglas_texto)} caracteres).")
+    if GCS_BUCKET_NAME and GCS_PDF_PATH:
+        manual_reglas_texto = leer_pdf_desde_gcs(GCS_BUCKET_NAME, GCS_PDF_PATH)
+        max_manual_length = 15000
+        if len(manual_reglas_texto) > max_manual_length:
+            st.sidebar.warning(f"Manual truncado a {max_manual_length} caracteres.")
+            manual_reglas_texto = manual_reglas_texto[:max_manual_length]
+        st.sidebar.info(f"Manual de reglas cargado ({len(manual_reglas_texto)} caracteres).")
 
-    # 2. Lógica de Generación y Auditoría de Ítems
-    st.header("Generación y Auditoría de Ítems.")
-    
-    if df_datos is None:
-        st.error("No se pudo cargar el archivo Excel desde GCS. Verifica la configuración.")
-    else:
-        # --- INTERFAZ DE USUARIO ---
-        st.subheader("1. Selecciona los Criterios para la Generación")
+    # 2. Lógica de Generación y Auditoría de Ítems
+    st.header("Generación y Auditoría de Ítems.")
+     
+    if df_datos is None:
+        st.error("No se pudo cargar el archivo Excel desde GCS. Verifica la configuración.")
+    else:
+        # --- INTERFAZ DE USUARIO ---
+        st.subheader("1. Selecciona los Criterios para la Generación")
 
-        all_grades = df_datos['GRADO'].dropna().unique().tolist()
-        grado_seleccionado = st.selectbox("Grado", sorted(all_grades), key="grado_sel")
+        all_grades = df_datos['GRADO'].dropna().unique().tolist()
+        grado_seleccionado = st.selectbox("Grado", sorted(all_grades), key="grado_sel")
 
-        df_filtrado_grado = df_datos[df_datos['GRADO'].astype(str).str.upper() == str(grado_seleccionado).upper()]
-        all_areas = df_filtrado_grado['ÁREA'].dropna().unique().tolist()
-        area_seleccionada = st.selectbox("Área", sorted(all_areas), key="area_sel")
+        df_filtrado_grado = df_datos[df_datos['GRADO'].astype(str).str.upper() == str(grado_seleccionado).upper()]
+        all_areas = df_filtrado_grado['ÁREA'].dropna().unique().tolist()
+        area_seleccionada = st.selectbox("Área", sorted(all_areas), key="area_sel")
 
-        df_filtrado_area = df_filtrado_grado[df_filtrado_grado['ÁREA'].astype(str).str.upper() == str(area_seleccionada).upper()]
-        all_asignaturas = df_filtrado_area['ASIGNATURA'].dropna().unique().tolist()
-        asignatura_seleccionada = st.selectbox("Asignatura", sorted(all_asignaturas), key="asignatura_sel")
-        df_filtrado_asignatura = df_filtrado_area[df_filtrado_area['ASIGNATURA'].astype(str).str.upper() == str(asignatura_seleccionada).upper()]
-        # --- INICIO DE LA MODIFICACIÓN ---
+        df_filtrado_area = df_filtrado_grado[df_filtrado_grado['ÁREA'].astype(str).str.upper() == str(area_seleccionada).upper()]
+        all_asignaturas = df_filtrado_area['ASIGNATURA'].dropna().unique().tolist()
+        asignatura_seleccionada = st.selectbox("Asignatura", sorted(all_asignaturas), key="asignatura_sel")
+        df_filtrado_asignatura = df_filtrado_area[df_filtrado_area['ASIGNATURA'].astype(str).str.upper() == str(asignatura_seleccionada).upper()]
+         
+        # --- INICIO DE LA MODIFICACIÓN ---
         # Cambiamos 'macrohabilidad' por 'MACROHABILIDAD'
         all_macrohabilidades = df_filtrado_asignatura['MACROHABILIDAD'].dropna().unique().tolist()
         macrohabilidad_seleccionada = st.selectbox("Macrohabilidad", sorted(all_macrohabilidades), key="macrohabilidad_sel")
@@ -1335,92 +1336,92 @@ def main():
         nombre_archivo_progreso = generar_nombre_archivo_progreso(grado_seleccionado, asignatura_seleccionada, macrohabilidad_seleccionada)
         
         if 'approved_items' not in st.session_state:
-            st.session_state['approved_items'] = []
+            st.session_state['approved_items'] = []
         
         # Renombramos 'current_station' a 'current_macrohabilidad' para mayor claridad
         if st.session_state.get('current_macrohabilidad') != macrohabilidad_seleccionada:
-            st.session_state['approved_items'] = cargar_progreso_desde_gcs(GCS_BUCKET_NAME, nombre_archivo_progreso)
-            st.session_state['current_review_index'] = 0
+            st.session_state['approved_items'] = cargar_progreso_desde_gcs(GCS_BUCKET_NAME, nombre_archivo_progreso)
+            st.session_state['current_review_index'] = 0
             
         # Actualizamos la macrohabilidad y nombre de archivo actuales en la sesión.
-        st.session_state['current_macrohabilidad'] = macrohabilidad_seleccionada
+        st.session_state['current_macrohabilidad'] = macrohabilidad_seleccionada
         st.session_state['nombre_archivo_progreso'] = nombre_archivo_progreso
         # --- FIN DE LA LÓGICA MODIFICADA ---
         
-        # --- INICIO DE LA MODIFICACIÓN ---
-        # Filtramos el dataframe final por 'MACROHABILIDAD' y renombramos la variable
-        df_filtrado_macro = df_filtrado_asignatura[df_filtrado_asignatura['MACROHABILIDAD'].astype(str).str.upper() == str(macrohabilidad_seleccionada).upper()]
-        # --- FIN DE LA MODIFICACIÓN ---
-        
-        # --- ORDEN CORREGIDO: SECCIÓN MOVIDA HACIA ARRIBA ---
-        st.markdown("---")
-        st.subheader("2. Configuración de Modelos de Vertex AI")
-        vertex_ai_models = [
-            "gemini-2.5-pro",
-            "gemini-2.5-flash",
-            "gemini-2.5-flash-lite"
-        ]
-        col1, col2 = st.columns(2)
-        with col1:
-            gen_model_name = st.selectbox("**Modelo para Generación**", vertex_ai_models, index=1, key="gen_vertex_name")
-        with col2:
-            audit_model_name = st.selectbox("**Modelo para Auditoría**", vertex_ai_models, index=0, key="audit_vertex_name")
-        # --- FIN DEL ORDEN CORREGIDO ---
-        
-        st.markdown("---")
-        st.subheader("3. Selecciona las Habilidades y la Cantidad de Ítems")
-
-        # --- INICIO DE LA NUEVA LÓGICA DE SELECCIÓN MÚLTIPLE ---
-
-        # --- INICIO DE LA LÓGICA DE SELECCIÓN MÚLTIPLE (MODIFICADA) ---
-
-        # Preparamos la lista de habilidades para mostrar en la interfaz
-        # 1. Usamos el nuevo dataframe filtrado: df_filtrado_macro
-        # 2. Mantenemos todas las columnas, solo filtramos duplicados
-        df_habilidades = df_filtrado_macro.drop_duplicates().reset_index(drop=True)
+        # --- INICIO DE LA MODIFICACIÓN ---
+        # Filtramos el dataframe final por 'MACROHABILIDAD' y renombramos la variable
+        df_filtrado_macro = df_filtrado_asignatura[df_filtrado_asignatura['MACROHABILIDAD'].astype(str).str.upper() == str(macrohabilidad_seleccionada).upper()]
+        # --- FIN DE LA MODIFICACIÓN ---
         
-        # Guardamos el dataframe de habilidades en el estado de la sesión para usarlo después
-        # El nombre de la variable de sesión 'df_habilidades_macrohabilidad' puede mantenerse por simplicidad
-        st.session_state['df_habilidades_macrohabilidad'] = df_habilidades
+        # --- ORDEN CORREGIDO: SECCIÓN MOVIDA HACIA ARRIBA ---
+        st.markdown("---")
+        st.subheader("2. Configuración de Modelos de Vertex AI")
+        vertex_ai_models = [
+            "gemini-2.5-pro",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite"
+        ]
+        col1, col2 = st.columns(2)
+        with col1:
+            gen_model_name = st.selectbox("**Modelo para Generación**", vertex_ai_models, index=1, key="gen_vertex_name")
+        with col2:
+            audit_model_name = st.selectbox("**Modelo para Auditoría**", vertex_ai_models, index=0, key="audit_vertex_name")
+        # --- FIN DEL ORDEN CORREGIDO ---
+         
+        st.markdown("---")
+        st.subheader("3. Selecciona las Habilidades y la Cantidad de Ítems")
 
-        # Creamos un diccionario para guardar las selecciones del usuario: {indice: cantidad}
-        if 'selecciones_usuario' not in st.session_state:
-            st.session_state['selecciones_usuario'] = {}
+        # --- INICIO DE LA NUEVA LÓGICA DE SELECCIÓN MÚLTIPLE ---
 
-        st.info("Marca las casillas de las habilidades que deseas generar y elige cuántos ítems necesitas para cada una.")
-        
-        # --- CÓDIGO DE REEMPLAZO ---
-        
-        # --- Lógica de Contexto General (Opcional y Corregida Definitivamente) ---
-        contexto_general_macrohabilidad = ""
-        with st.expander("📝 Opcional: Generar un contexto general para la macrohabilidad"):
-            
-            # 1. Inicializamos la variable de estado principal si no existe. Esta será nuestra ÚNICA fuente de verdad.
-            if 'generated_context' not in st.session_state:
-                st.session_state.generated_context = ""
-            if 'show_context_refinement' not in st.session_state:
-                st.session_state.show_context_refinement = False
-        
-            # --- WIDGETS DE SELECCIÓN (Sin cambios) ---
-            categorias_contexto = ["No usar contexto general", "Contexto Escolar", "Contexto Cotidiano", "Contexto Científico", "Contexto Histórico", "Contexto Literario", "Contexto Político/Social", "Contexto Tecnológico", "Fragmento para Lectura", "Otro..."]
-            categoria_elegida = st.selectbox("Elige un tipo de contexto:", categorias_contexto, key="ctx_categoria")
-            tipo_contexto_final = categoria_elegida
-            if categoria_elegida == "Fragmento para Lectura":
-                tipos_fragmento = ["Crónica", "Noticia", "Entrevista", "Ensayo", "Cuento Corto", "Manual"]
-                tipo_contexto_final = st.selectbox("Elige el tipo de fragmento:", tipos_fragmento, key="ctx_fragmento")
-            elif categoria_elegida == "Otro...":
-                tipo_contexto_final = st.text_input("Especifica el tipo de contexto que deseas:", key="ctx_otro", placeholder="Ej: Contexto mitológico griego")
-            idea_usuario_ctx = st.text_area("Opcional: Da una idea o borrador para guiar a la IA...", key="ctx_idea", placeholder="Ej: Un equipo de biólogos marinos descubre una nueva especie...")
-            
-            if categoria_elegida != "No usar contexto general":
-                if st.button("🧠 Generar Contexto con IA", key="btn_gen_ctx"):
-                    with st.spinner("Generando contexto..."):
-                        contexto_sugerido = generar_contexto_general_con_llm(gen_model_name, grado_seleccionado, area_seleccionada, asignatura_seleccionada, macrohabilidad_seleccionada, tipo_contexto=tipo_contexto_final, idea_usuario=idea_usuario_ctx)
-                        if contexto_sugerido:
-                            # Al generar, actualizamos directamente nuestra única variable de estado.
-                            st.session_state.generated_context = contexto_sugerido
-                            st.session_state.show_context_refinement = False
-                            st.rerun()
+        # --- INICIO DE LA LÓGICA DE SELECCIÓN MÚLTIPLE (MODIFICADA) ---
+
+        # Preparamos la lista de habilidades para mostrar en la interfaz
+        # 1. Usamos el nuevo dataframe filtrado: df_filtrado_macro
+        # 2. Mantenemos todas las columnas, solo filtramos duplicados
+        df_habilidades = df_filtrado_macro.drop_duplicates().reset_index(drop=True)
+         
+        # Guardamos el dataframe de habilidades en el estado de la sesión para usarlo después
+        # El nombre de la variable de sesión 'df_habilidades_macrohabilidad' puede mantenerse por simplicidad
+        st.session_state['df_habilidades_macrohabilidad'] = df_habilidades
+
+        # Creamos un diccionario para guardar las selecciones del usuario: {indice: cantidad}
+        if 'selecciones_usuario' not in st.session_state:
+            st.session_state['selecciones_usuario'] = {}
+
+        st.info("Marca las casillas de las habilidades que deseas generar y elige cuántos ítems necesitas para cada una.")
+         
+        # --- CÓDIGO DE REEMPLAZO ---
+         
+        # --- Lógica de Contexto General (Opcional y Corregida Definitivamente) ---
+        contexto_general_macrohabilidad = ""
+        with st.expander("📝 Opcional: Generar un contexto general para la macrohabilidad"):
+             
+            # 1. Inicializamos la variable de estado principal si no existe. Esta será nuestra ÚNICA fuente de verdad.
+            if 'generated_context' not in st.session_state:
+                st.session_state.generated_context = ""
+            if 'show_context_refinement' not in st.session_state:
+                st.session_state.show_context_refinement = False
+         
+            # --- WIDGETS DE SELECCIÓN (Sin cambios) ---
+            categorias_contexto = ["No usar contexto general", "Contexto Escolar", "Contexto Cotidiano", "Contexto Científico", "Contexto Histórico", "Contexto Literario", "Contexto Político/Social", "Contexto Tecnológico", "Fragmento para Lectura", "Otro..."]
+            categoria_elegida = st.selectbox("Elige un tipo de contexto:", categorias_contexto, key="ctx_categoria")
+            tipo_contexto_final = categoria_elegida
+            if categoria_elegida == "Fragmento para Lectura":
+                tipos_fragmento = ["Crónica", "Noticia", "Entrevista", "Ensayo", "Cuento Corto", "Manual"]
+                tipo_contexto_final = st.selectbox("Elige el tipo de fragmento:", tipos_fragmento, key="ctx_fragmento")
+            elif categoria_elegida == "Otro...":
+                tipo_contexto_final = st.text_input("Especifica el tipo de contexto que deseas:", key="ctx_otro", placeholder="Ej: Contexto mitológico griego")
+            idea_usuario_ctx = st.text_area("Opcional: Da una idea o borrador para guiar a la IA...", key="ctx_idea", placeholder="Ej: Un equipo de biólogos marinos descubre una nueva especie...")
+             
+            if categoria_elegida != "No usar contexto general":
+                if st.button("🧠 Generar Contexto con IA", key="btn_gen_ctx"):
+                    with st.spinner("Generando contexto..."):
+                        contexto_sugerido = generar_contexto_general_con_llm(gen_model_name, grado_seleccionado, area_seleccionada, asignatura_seleccionada, macrohabilidad_seleccionada, tipo_contexto=tipo_contexto_final, idea_usuario=idea_usuario_ctx)
+                        if contexto_sugerido:
+                            # Al generar, actualizamos directamente nuestra única variable de estado.
+                            st.session_state.generated_context = contexto_sugerido
+                            st.session_state.show_context_refinement = False
+                            st.rerun()
         
             # --- EDICIÓN Y REFINAMIENTO (LÓGICA SIMPLIFICADA) ---
             if st.session_state.generated_context:
