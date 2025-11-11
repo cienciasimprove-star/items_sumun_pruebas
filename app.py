@@ -1326,33 +1326,33 @@ def main():
 
         df_filtrado_asignatura = df_filtrado_area[df_filtrado_area['ASIGNATURA'].astype(str).str.upper() == str(asignatura_seleccionada).upper()]
          
-         # --- INICIO DE LA MODIFICACIÓN ---
-         # Cambiamos 'macrohabilidad' por 'MACROHABILIDAD'
-         all_macrohabilidades = df_filtrado_asignatura['MACROHABILIDAD'].dropna().unique().tolist()
-         macrohabilidad_seleccionada = st.selectbox("Macrohabilidad", sorted(all_macrohabilidades), key="macrohabilidad_sel")
-         # --- FIN DE LA MODIFICACIÓN ---
+        # --- INICIO DE LA MODIFICACIÓN ---
+        # Cambiamos 'macrohabilidad' por 'MACROHABILIDAD'
+        all_macrohabilidades = df_filtrado_asignatura['MACROHABILIDAD'].dropna().unique().tolist()
+        macrohabilidad_seleccionada = st.selectbox("Macrohabilidad", sorted(all_macrohabilidades), key="macrohabilidad_sel")
+        # --- FIN DE LA MODIFICACIÓN ---
 
-         # --- LÓGICA DE CARGA Y GESTIÓN DE PROGRESO (MODIFICADA) ---
-         # Usamos 'macrohabilidad_seleccionada' para generar el nombre del archivo de progreso
-         nombre_archivo_progreso = generar_nombre_archivo_progreso(grado_seleccionado, asignatura_seleccionada, macrohabilidad_seleccionada)
+        # --- LÓGICA DE CARGA Y GESTIÓN DE PROGRESO (MODIFICADA) ---
+        # Usamos 'macrohabilidad_seleccionada' para generar el nombre del archivo de progreso
+        nombre_archivo_progreso = generar_nombre_archivo_progreso(grado_seleccionado, asignatura_seleccionada, macrohabilidad_seleccionada)
         
-         if 'approved_items' not in st.session_state:
-             st.session_state['approved_items'] = []
+        if 'approved_items' not in st.session_state:
+            st.session_state['approved_items'] = []
         
-         # Renombramos 'current_station' a 'current_macrohabilidad' para mayor claridad
-         if st.session_state.get('current_macrohabilidad') != macrohabilidad_seleccionada:
-             st.session_state['approved_items'] = cargar_progreso_desde_gcs(GCS_BUCKET_NAME, nombre_archivo_progreso)
-             st.session_state['current_review_index'] = 0
+        # Renombramos 'current_station' a 'current_macrohabilidad' para mayor claridad
+        if st.session_state.get('current_macrohabilidad') != macrohabilidad_seleccionada:
+            st.session_state['approved_items'] = cargar_progreso_desde_gcs(GCS_BUCKET_NAME, nombre_archivo_progreso)
+            st.session_state['current_review_index'] = 0
             
-         # Actualizamos la macrohabilidad y nombre de archivo actuales en la sesión.
-         st.session_state['current_macrohabilidad'] = macrohabilidad_seleccionada
-         st.session_state['nombre_archivo_progreso'] = nombre_archivo_progreso
-         # --- FIN DE LA LÓGICA MODIFICADA ---
+        # Actualizamos la macrohabilidad y nombre de archivo actuales en la sesión.
+        st.session_state['current_macrohabilidad'] = macrohabilidad_seleccionada
+        st.session_state['nombre_archivo_progreso'] = nombre_archivo_progreso
+        # --- FIN DE LA LÓGICA MODIFICADA ---
         
-         # --- INICIO DE LA MODIFICACIÓN ---
-         # Filtramos el dataframe final por 'MACROHABILIDAD' y renombramos la variable
-         df_filtrado_macro = df_filtrado_asignatura[df_filtrado_asignatura['MACROHABILIDAD'].astype(str).str.upper() == str(macrohabilidad_seleccionada).upper()]
-         # --- FIN DE LA MODIFICACIÓN ---
+        # --- INICIO DE LA MODIFICACIÓN ---
+        # Filtramos el dataframe final por 'MACROHABILIDAD' y renombramos la variable
+        df_filtrado_macro = df_filtrado_asignatura[df_filtrado_asignatura['MACROHABILIDAD'].astype(str).str.upper() == str(macrohabilidad_seleccionada).upper()]
+        # --- FIN DE LA MODIFICACIÓN ---
         
         # --- ORDEN CORREGIDO: SECCIÓN MOVIDA HACIA ARRIBA ---
         st.markdown("---")
