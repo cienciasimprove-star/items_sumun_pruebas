@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 import numpy as np
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from vertexai.language_models import TextEmbeddingModel # Para los embeddings
+import fitz  # PyMuPDF
 
 
 def parse_json_llm(s: str):
@@ -203,15 +204,21 @@ def describir_imagen_con_llm(model_name, image_bytes, file_type):
 
 
 def extraer_texto_pdf(pdf_bytes):
-    """Extrae texto de un PDF en bytes."""
+    """
+    Extrae texto de un PDF en bytes USANDO PyMuPDF (fitz),
+    que es mucho más rápido y robusto que PyPDF2.
+    """
     try:
         texto_pdf = ""
-        reader = PyPDF2.PdfReader(io.BytesIO(pdf_bytes))
-        for page in reader.pages:
-            texto_pdf += (page.extract_text() or "") + "\n\n" # Añadir espacio entre páginas
+        # Abrir el PDF desde los bytes en memoria
+        with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+            for page in doc:
+                # .get_text() es el método de PyMuPDF
+                texto_pdf += page.get_text() + "\n\n" 
         return texto_pdf
     except Exception as e:
-        st.error(f"Error al leer el PDF: {e}")
+        # Aún mantenemos el st.error por si el PDF está dañado
+        st.error(f"Error al leer el PDF con PyMuPDF: {e}")
         return None
 
 
