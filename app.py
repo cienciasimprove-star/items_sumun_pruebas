@@ -1333,14 +1333,14 @@ def main():
             st.session_state['approved_items'] = []
         
         # Ahora, gestionamos la carga de progreso si el usuario cambia de macrohabilidad.
-        if st.session_state.get('current_station') != macrohabilidad_seleccionada:
+        if st.session_state.get('current_macrohabilidad') != macrohabilidad_seleccionada:
             # Si la macrohabilidad cambió, cargamos el progreso desde GCS.
             # Esto reemplazará la lista vacía con los ítems guardados, si existen.
             st.session_state['approved_items'] = cargar_progreso_desde_gcs(GCS_BUCKET_NAME, nombre_archivo_progreso)
             st.session_state['current_review_index'] = 0
             
         # Finalmente, actualizamos la macrohabilidad y nombre de archivo actuales en la sesión.
-        st.session_state['current_station'] = macrohabilidad_seleccionada
+        st.session_state['current_macrohabilidad'] = macrohabilidad_seleccionada
         st.session_state['nombre_archivo_progreso'] = nombre_archivo_progreso
         # --- FIN DE LA LÓGICA ---
         
@@ -1367,7 +1367,7 @@ def main():
         # --- INICIO DE LA NUEVA LÓGICA DE SELECCIÓN MÚLTIPLE ---
 
         # Preparamos la lista de habilidades para mostrar en la interfaz
-        df_habilidades = df_filtrado_macrohabilidad[['ID', 'Numero', 'PROCESO COGNITIVO', 'MICROHABILIDAD', 'COMPETENCIA MICROHABILIDAD']].drop_duplicates().reset_index(drop=True)
+        df_habilidades = df_filtrado_macrohabilidad.drop_duplicates(subset=['MICROHABILIDAD']).reset_index(drop=True)
         
         # Guardamos el dataframe de habilidades en el estado de la sesión para usarlo después
         st.session_state['df_habilidades_macrohabilidad'] = df_habilidades
