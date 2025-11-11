@@ -1376,20 +1376,20 @@ def main():
 
         # --- INICIO DE LA LÓGICA DE SELECCIÓN MÚLTIPLE (MODIFICADA) ---
 
-         # Preparamos la lista de habilidades para mostrar en la interfaz
-         # 1. Usamos el nuevo dataframe filtrado: df_filtrado_macro
-         # 2. Mantenemos todas las columnas, solo filtramos duplicados
-         df_habilidades = df_filtrado_macro.drop_duplicates().reset_index(drop=True)
+        # Preparamos la lista de habilidades para mostrar en la interfaz
+        # 1. Usamos el nuevo dataframe filtrado: df_filtrado_macro
+        # 2. Mantenemos todas las columnas, solo filtramos duplicados
+        df_habilidades = df_filtrado_macro.drop_duplicates().reset_index(drop=True)
         
-         # Guardamos el dataframe de habilidades en el estado de la sesión para usarlo después
-         # El nombre de la variable de sesión 'df_habilidades_macrohabilidad' puede mantenerse por simplicidad
-         st.session_state['df_habilidades_macrohabilidad'] = df_habilidades
+        # Guardamos el dataframe de habilidades en el estado de la sesión para usarlo después
+        # El nombre de la variable de sesión 'df_habilidades_macrohabilidad' puede mantenerse por simplicidad
+        st.session_state['df_habilidades_macrohabilidad'] = df_habilidades
 
-         # Creamos un diccionario para guardar las selecciones del usuario: {indice: cantidad}
-         if 'selecciones_usuario' not in st.session_state:
-             st.session_state['selecciones_usuario'] = {}
+        # Creamos un diccionario para guardar las selecciones del usuario: {indice: cantidad}
+        if 'selecciones_usuario' not in st.session_state:
+            st.session_state['selecciones_usuario'] = {}
 
-         st.info("Marca las casillas de las habilidades que deseas generar y elige cuántos ítems necesitas para cada una.")
+        st.info("Marca las casillas de las habilidades que deseas generar y elige cuántos ítems necesitas para cada una.")
         
         # --- CÓDIGO DE REEMPLAZO ---
         
