@@ -1312,41 +1312,51 @@ def main():
         st.session_state.processed_pdf_name = None
 
     pdf_itinerario = st.sidebar.file_uploader("Subir PDF del Itinerario/Libro", type="pdf")
-
+    #
     if pdf_itinerario:
-        # Si se sube un nuevo libro O es un libro diferente al procesado
-        if pdf_itinerario.name != st.session_state.processed_pdf_name:
-            with st.sidebar:
-                with st.spinner(f"Procesando '{pdf_itinerario.name}'... Esto puede tardar unos minutos."):
+            # Si se sube un nuevo libro O es un libro diferente al procesado
+            if pdf_itinerario.name != st.session_state.processed_pdf_name:
                 
-                # 1. Borramos el índice viejo (si existe)
-                if 'pdf_index' in st.session_state:
-                    del st.session_state['pdf_index']
+                # 1. Primero, le decimos a Streamlit que TODO lo siguiente va en la barra lateral
+                with st.sidebar:
+                    # 2. AHORA llamamos al spinner normal, y aparecerá en la barra lateral
+                    with st.spinner(f"Procesando '{pdf_itinerario.name}'... Esto puede tardar unos minutos."):
                 
-                # 2. Procesamos el nuevo libro
-                pdf_bytes = pdf_itinerario.getvalue()
-                texto_completo = extraer_texto_pdf(pdf_bytes)
-                
-                if texto_completo:
-                    # 3. Dividir (Chunking)
-                    text_splitter = RecursiveCharacterTextSplitter(
-                        chunk_size=1000, # 1000 caracteres por pedazo
-                        chunk_overlap=100  # 100 caracteres de superposición
-                    )
-                    chunks = text_splitter.split_text(texto_completo)
+                        # --- INICIO DE LA SECCIÓN CORREGIDA ---
+                        # Todo lo que sigue debe estar indentado a este nivel
+                        # para que ocurra DENTRO del 'with st.spinner'
+    
+                        # 1. Borramos el índice viejo (si existe)
+                        if 'pdf_index' in st.session_state:
+                            del st.session_state['pdf_index']
                     
-                    # 4. Vectorizar (Embedding) y almacenar
-                    st.session_state['pdf_index'] = crear_indice_vectorial(chunks)
-                    st.session_state.processed_pdf_name = pdf_itinerario.name
-                    st.sidebar.success(f"Libro '{pdf_itinerario.name}' procesado. {len(chunks)} secciones indexadas.")
-                else:
-                    st.sidebar.error("El PDF está vacío o no se pudo leer.")
-        
-        # Si el libro es el mismo que ya está cargado, no hacemos nada
-        # y solo mostramos el mensaje de éxito.
-        elif 'pdf_index' in st.session_state:
-             st.sidebar.success(f"Libro '{pdf_itinerario.name}' listo.")
-
+                        # 2. Procesamos el nuevo libro
+                        pdf_bytes = pdf_itinerario.getvalue()
+                        texto_completo = extraer_texto_pdf(pdf_bytes)
+                        
+                        if texto_completo:
+                            # 3. Dividir (Chunking)
+                            text_splitter = RecursiveCharacterTextSplitter(
+                                chunk_size=1000, # 1000 caracteres por pedazo
+                                chunk_overlap=100  # 100 caracteres de superposición
+                            )
+                            chunks = text_splitter.split_text(texto_completo)
+                            
+                            # 4. Vectorizar (Embedding) y almacenar
+                            st.session_state['pdf_index'] = crear_indice_vectorial(chunks)
+                            st.session_state.processed_pdf_name = pdf_itinerario.name
+                            
+                            # Mostramos el éxito (aún dentro del 'with st.sidebar')
+                            st.sidebar.success(f"Libro '{pdf_itinerario.name}' procesado. {len(chunks)} secciones indexadas.")
+                        else:
+                            st.sidebar.error("El PDF está vacío o no se pudo leer.")
+                        # --- FIN DE LA SECCIÓN CORREGIDA ---
+    
+            # Si el libro es el mismo que ya está cargado, no hacemos nada
+            # y solo mostramos el mensaje de éxito.
+            elif 'pdf_index' in st.session_state:
+                 st.sidebar.success(f"Libro '{pdf_itinerario.name}' listo.")
+                 
     # 2. Lógica de Generación y Auditoría de Ítems
     st.header("Generación y Auditoría de Ítems.")
     
