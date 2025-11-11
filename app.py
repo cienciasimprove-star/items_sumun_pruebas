@@ -1316,7 +1316,8 @@ def main():
     if pdf_itinerario:
         # Si se sube un nuevo libro O es un libro diferente al procesado
         if pdf_itinerario.name != st.session_state.processed_pdf_name:
-            with st.sidebar.spinner(f"Procesando '{pdf_itinerario.name}'... Esto puede tardar unos minutos."):
+            with st.sidebar:
+                with st.spinner(f"Procesando '{pdf_itinerario.name}'... Esto puede tardar unos minutos."):
                 
                 # 1. Borramos el índice viejo (si existe)
                 if 'pdf_index' in st.session_state:
