@@ -1780,7 +1780,23 @@ def main():
                             **item_spec_row
                         }
                         criterios_para_preguntas = {"tipo_pregunta": "opción múltiple con 4 opciones", "dificultad": "media", "contexto_educativo": "estudiantes Colombianos entre 10 y 17 años"}
-                        
+                      
+                        # --- AÑADIR ESTE BLOQUE DE BÚSQUEDA ---
+                        contexto_del_libro = ""
+                        if 'pdf_index' in st.session_state:
+                            with st.spinner("Buscando en el libro guía..."):
+                                # Usamos la microhabilidad como consulta
+                                query_microhabilidad = current_fila_datos.get('MICROHABILIDAD', '')
+                                
+                                # Buscamos los 3 chunks más relevantes
+                                chunks_relevantes = buscar_en_indice(query_microhabilidad, k=3)
+                                
+                                if chunks_relevantes:
+                                    contexto_del_libro = "\n\n---\n\n".join(chunks_relevantes)
+                                    st.info("ℹ️ Contexto relevante encontrado en el libro guía.")
+                        # --- FIN DEL BLOQUE DE BÚSQUEDA ---
+
+    
                         item_to_review = generar_pregunta_con_seleccion(
                             gen_model_name, audit_model_name, fila_datos=current_fila_datos,
                             criterios_generacion=criterios_para_preguntas, manual_reglas_texto=manual_reglas_texto,
