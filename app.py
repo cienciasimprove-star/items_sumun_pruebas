@@ -580,13 +580,13 @@ def main():
     """
         return generar_texto_con_llm(model_name, auditoria_prompt, force_json=True), auditoria_prompt
 
-                             
+               
     def generar_pregunta_con_seleccion(gen_model_name, audit_model_name,
                                          fila_datos, criterios_generacion, manual_reglas_texto="",
                                          informacion_adicional_usuario="",
                                          prompt_bloom_adicional="", prompt_construccion_adicional="", prompt_especifico_adicional="",
                                          prompt_auditor_adicional="",
-                                         contexto_general_macrohabilidad="", feedback_usuario="", item_a_refinar_text="", descripcion_imagen_aprobada=""):
+                                         contexto_general_macrohabilidad="", contexto_del_libro="",  feedback_usuario="", item_a_refinar_text="", descripcion_imagen_aprobada=""):
         """
         Genera una pregunta educativa de opción múltiple usando el modelo de generación seleccionado
         y la itera para refinarla si la auditoría lo requiere.
@@ -779,7 +779,17 @@ def main():
                 # --- FIN DE LA NUEVA LÓGICA ---
     
                 clave_aleatoria = random.choice(['A', 'B', 'C', 'D'])
-                
+
+                seccion_contexto_libro = ""
+                if contexto_del_libro:
+                    seccion_contexto_libro = f"""
+        --- CONTEXTO PRINCIPAL DEL LIBRO GUÍA (¡USO OBLIGATORIO!) ---
+        ¡INSTRUCCIÓN CRÍTICA! Debes basar tu pregunta, opciones y justificaciones **principalmente** en los siguientes extractos del libro guía. La respuesta correcta DEBE poder deducirse de este texto.
+        
+        {contexto_del_libro}
+        ---------------------------------------------------------
+        """
+                #
                 seccion_imagen = ""
                 if descripcion_imagen_aprobada:
                     seccion_imagen = f"""
@@ -820,6 +830,8 @@ def main():
                 {instruccion_contexto}
 
                 {seccion_imagen}
+
+                {seccion_contexto_libro}
 
                 # =============================================================================
                 # INICIO DE LA MODIFICACIÓN CLAVE: ANÁLISIS COGNITIVO OBLIGATORIO Y EXCLUSIVO
