@@ -87,11 +87,10 @@ def normaliza_claves_classif(c: dict) -> dict:
         'GRADO': _pick(c, 'GRADO', 'Grado', 'grado'),
         'ÁREA': _pick(c, 'ÁREA', 'Área', 'Area', 'área', 'area'),
         'ASIGNATURA': _pick(c, 'ASIGNATURA', 'Asignatura', 'asignatura'),
-        'ESTACIÓN': _pick(c, 'ESTACIÓN', 'Estación', 'Estacion', 'estación', 'estacion'),
+        'MACROHABILIDAD': _pick(c, 'MACROHABILIDAD', 'Macrohabilidad', 'Macrohabilidad', 'macrohabilidad', 'macrohabilidad'),
         'PROCESO COGNITIVO': _pick(c, 'PROCESO COGNITIVO', 'Proceso Cognitivo', 'proceso cognitivo'),
-        'NANOHABILIDAD': _pick(c, 'NANOHABILIDAD', 'Nanohabilidad'),
         'MICROHABILIDAD': _pick(c, 'MICROHABILIDAD', 'Microhabilidad'),
-        'COMPETENCIA NANOHABILIDAD': _pick(c, 'COMPETENCIA NANOHABILIDAD', 'Competencia Nanohabilidad'),
+        'COMPETENCIA MICROHABILIDAD': _pick(c, 'COMPETENCIA MICROHABILIDAD', 'Competencia Microhabilidad'),
         'Numero': _pick(c, 'Numero', 'NUMERO', 'Número', 'NÚMERO', 'numero', 'número'),
     }
 
@@ -164,12 +163,12 @@ def main():
     # -------------------------------------------------------------------
     
     ### INICIO DE NUEVAS FUNCIONALIDADES DE AUTOGUARDADO ###
-    def generar_nombre_archivo_progreso(grado, asignatura, estacion):
+    def generar_nombre_archivo_progreso(grado, asignatura, macrohabilidad):
         """Crea un nombre de archivo seguro y único basado en las selecciones."""
         grado_str = str(grado).replace(" ", "_")
         asignatura_str = str(asignatura).replace(" ", "_")
-        estacion_str = str(estacion).replace(" ", "_")
-        nombre_base = f"progreso_{grado_str}_{asignatura_str}_{estacion_str}"
+        macrohabilidad_str = str(macrohabilidad).replace(" ", "_")
+        nombre_base = f"progreso_{grado_str}_{asignatura_str}_{macrohabilidad_str}"
         nombre_seguro = re.sub(r'[^a-zA-Z0-9_.-]', '', nombre_base)
         return f"{nombre_seguro}.json"
 
@@ -195,7 +194,7 @@ def main():
             if blob.exists():
                 json_data = blob.download_as_string()
                 data = json.loads(json_data)
-                st.sidebar.success(f"Progreso recuperado para esta estación.")
+                st.sidebar.success(f"Progreso recuperado para esta macrohabilidad.")
                 return data
             return []
         except Exception as e:
@@ -262,9 +261,9 @@ def main():
 
     # --- CÓDIGO DE REEMPLAZO ---
     
-    def generar_contexto_general_con_llm(model_name, grado, area, asignatura, estacion, tipo_contexto="", idea_usuario=""):
+    def generar_contexto_general_con_llm(model_name, grado, area, asignatura, macrohabilidad, tipo_contexto="", idea_usuario=""):
         """
-        Genera un texto de contexto general para una estación, aplicando una tipología textual específica si se proporciona.
+        Genera un texto de contexto general para una macrohabilidad, aplicando una tipología textual específica si se proporciona.
         """
         # Construimos una sección especial para la tipología solo si se especifica una
         seccion_tipologia = ""
@@ -285,7 +284,7 @@ def main():
     - Grado: {grado}
     - Área: {area}
     - Asignatura: {asignatura}
-    - Estación o unidad temática: {estacion}
+    - Macrohabilidad o unidad temática: {macrohabilidad}
     {seccion_tipologia}
     --- IDEA GUÍA DEL USUARIO (Opcional) ---
     {idea_usuario if idea_usuario else "No se proporcionó una idea específica, usa tu creatividad para el tema."}
@@ -390,9 +389,9 @@ def main():
             st.error(f"Error al llamar a Vertex AI ({model_name}): {e}")
             return None
 
-    def auditar_item_con_llm(model_name, item_generado, grado, area, asignatura, estacion,
-                             proceso_cognitivo, nanohabilidad, microhabilidad,
-                             competencia_nanohabilidad, contexto_educativo, manual_reglas_texto="", 
+    def auditar_item_con_llm(model_name, item_generado, grado, area, asignatura, macrohabilidad,
+                             proceso_cognitivo, microhabilidad,
+                             competencia_microhabilidad, contexto_educativo, manual_reglas_texto="", 
                              descripcion_bloom="", grafico_necesario="", descripcion_grafico="", 
                              prompt_auditor_adicional=""):
         """
@@ -420,7 +419,7 @@ def main():
     6.  **Estilo y Restricciones:** El ítem debe evitar negaciones mal redactadas, nombres/marcas/lugares reales, datos personales y frases vagas como “ninguna de las anteriores” o “todas las anteriores”.
     
     7.  **Alineación del Contenido:** Evalúa si el ítem se alinea EXCLUSIVAMENTE con todos los parámetros:
-        * **Temáticos:** Grado (`{grado}`), Área (`{area}`), Asignatura (`{asignatura}`), Estación (`{estacion}`), Nanohabilidad (`{nanohabilidad}`).
+        * **Temáticos:** Grado (`{grado}`), Área (`{area}`), Asignatura (`{asignatura}`), Macrohabilidad (`{macrohabilidad}`), Microhabilidad (`{microhabilidad}`).
         * **Cognitivos:** Proceso (`{proceso_cognitivo}`). Crucialmente, verifica la **exclusividad cognitiva**: la tarea debe ser demostrablemente más compleja que el nivel cognitivo anterior y no debe requerir un nivel superior.
     
     8.  **Gráfico (si aplica):** Si se requiere un gráfico (`{grafico_necesario}`), la descripción (`{descripcion_grafico}`) debe ser clara y funcional.
@@ -495,7 +494,7 @@ def main():
                                          informacion_adicional_usuario="",
                                          prompt_bloom_adicional="", prompt_construccion_adicional="", prompt_especifico_adicional="",
                                          prompt_auditor_adicional="",
-                                         contexto_general_estacion="", feedback_usuario="", item_a_refinar_text="", descripcion_imagen_aprobada=""):
+                                         contexto_general_macrohabilidad="", feedback_usuario="", item_a_refinar_text="", descripcion_imagen_aprobada=""):
         """
         Genera una pregunta educativa de opción múltiple usando el modelo de generación seleccionado
         y la itera para refinarla si la auditoría lo requiere.
@@ -511,13 +510,12 @@ def main():
         grado_elegido = fila_datos.get('GRADO', 'no especificado')
         area_elegida = fila_datos.get('ÁREA', 'no especificada')
         asignatura_elegida = fila_datos.get('ASIGNATURA', 'no especificada')
-        estacion_elegida = fila_datos.get('ESTACIÓN', 'no especificada')
+        macrohabilidad_elegida = fila_datos.get('MACROHABILIDAD', 'no especificada')
         proceso_cognitivo_elegido = fila_datos.get('PROCESO COGNITIVO', 'no especificado')
-        nanohabilidad_elegida = fila_datos.get('NANOHABILIDAD', 'no especificada')
         microhabilidad_elegida = fila_datos.get('MICROHABILIDAD', 'no especificada')
-        competencia_nanohabilidad_elegida = fila_datos.get('COMPETENCIA NANOHABILIDAD', 'no especificada')
+        competencia_microhabilidad_elegida = fila_datos.get('COMPETENCIA MICROHABILIDAD', 'no especificada')
     
-        dato_para_pregunta_foco = nanohabilidad_elegida
+        dato_para_pregunta_foco = microhabilidad_elegida
         descripcion_bloom = get_descripcion_detallada_bloom(proceso_cognitivo_elegido)
         ejemplos_preguntas = get_preguntas_tipo_formateadas(proceso_cognitivo_elegido)
         
@@ -535,11 +533,10 @@ def main():
             "GRADO": grado_elegido,
             "ÁREA": area_elegida,
             "ASIGNATURA": asignatura_elegida,
-            "ESTACIÓN": estacion_elegida,
+            "MACROHABILIDAD": macrohabilidad_elegida,
             "PROCESO COGNITIVO": proceso_cognitivo_elegido,
-            "NANOHABILIDAD": nanohabilidad_elegida,
             "MICROHABILIDAD": microhabilidad_elegida,
-            "COMPETENCIA NANOHABILIDAD": competencia_nanohabilidad_elegida,
+            "COMPETENCIA MICROHABILIDAD": competencia_microhabilidad_elegida,
             "Numero": numero_fila_elegido
         }
     
@@ -619,9 +616,9 @@ def main():
                 auditoria_resultado, full_auditor_prompt = auditar_item_con_llm(
                     audit_model_name,
                     item_generado=current_item_text,
-                    grado=grado_elegido, area=area_elegida, asignatura=asignatura_elegida, estacion=estacion_elegida,
-                    proceso_cognitivo=proceso_cognitivo_elegido, nanohabilidad=nanohabilidad_elegida,
-                    microhabilidad=microhabilidad_elegida, competencia_nanohabilidad=competencia_nanohabilidad_elegida,
+                    grado=grado_elegido, area=area_elegida, asignatura=asignatura_elegida, macrohabilidad=macrohabilidad_elegida,
+                    proceso_cognitivo=proceso_cognitivo_elegido,
+                    microhabilidad=microhabilidad_elegida, competencia_microhabilidad=competencia_microhabilidad_elegida,
                     contexto_educativo=contexto_educativo, manual_reglas_texto=manual_reglas_texto,
                     descripcion_bloom=descripcion_bloom,
                     grafico_necesario=grafico_necesario,
@@ -669,22 +666,22 @@ def main():
                 instruccion_contexto = ""
                 formato_salida_pregunta = "PREGUNTA: [Redacta aquí el contexto (si es necesario) y el enunciado de la pregunta]"
     
-                if contexto_general_estacion:
+                if contexto_general_macrohabilidad:
                     # Si SÍ hay un contexto compartido, las instrucciones son estrictas.
                     instruccion_contexto = f"""
-    --- CONTEXTO GENERAL OBLIGATORIO DE LA ESTACIÓN ---
+    --- CONTEXTO GENERAL OBLIGATORIO DE LA MACROHABILIDAD ---
     ¡INSTRUCCIÓN CRÍTICA! Debes iniciar el campo 'PREGUNTA:' exactamente con el siguiente texto de contexto, sin alterarlo, resumirlo o parafrasearlo. Después del contexto, redacta el enunciado específico para el ítem.
     
-    CONTEXTO GENERAL DE LA ESTACIÓN (DEBE SER INCLUIDO TEXTUALMENTE):
-    "{contexto_general_estacion}"
+    CONTEXTO GENERAL DE LA MACROHABILIDAD (DEBE SER INCLUIDO TEXTUALMENTE):
+    "{contexto_general_macrohabilidad}"
     ----------------------------------------------------
     """
-                    formato_salida_pregunta = "PREGUNTA: [Texto del CONTEXTO GENERAL DE LA ESTACIÓN] [Enunciado específico de la pregunta]"
+                    formato_salida_pregunta = "PREGUNTA: [Texto del CONTEXTO GENERAL DE LA MACROHABILIDAD] [Enunciado específico de la pregunta]"
                 else:
                     # Si NO hay contexto, las instrucciones son las normales.
                     instruccion_contexto = """
-    --- CONTEXTO GENERAL DE LA ESTACIÓN (si aplica) ---
-    Este ítem debe generar su propio contexto individual, ya que no se ha definido un contexto general para la estación.
+    --- CONTEXTO GENERAL DE LA MACROHABILIDAD (si aplica) ---
+    Este ítem debe generar su propio contexto individual, ya que no se ha definido un contexto general para la macrohabilidad.
     ----------------------------------------------------
     """
                 # --- FIN DE LA NUEVA LÓGICA ---
@@ -710,7 +707,7 @@ def main():
                 - Grado: {grado_elegido}
                 - Área: {area_elegida}
                 - Asignatura: {asignatura_elegida}
-                - Estación o unidad temática: {estacion_elegida}
+                - Macrohabilidad o unidad temática: {macrohabilidad_elegida}
                 - Proceso cognitivo (Taxonomía de Bloom): {proceso_cognitivo_elegido}
                 - Descripción DETALLADA y VINCULANTE del proceso cognitivo:
                     "{descripcion_bloom}"
@@ -724,7 +721,7 @@ def main():
                 {prompt_bloom_adicional if prompt_bloom_adicional else "No se proporcionaron prompts adicionales específicos para taxonomía de Bloom."}
                 ------------------------------------------------------------------
                 
-                - Nanohabilidad (foco principal del ítem): {nanohabilidad_elegida}
+                - Microhabilidad (foco principal del ítem): {microhabilidad_elegida}
                 - Nivel educativo esperado del estudiante: {contexto_educativo}
                 - Nivel de dificultad deseado: {dificultad}
                 
@@ -738,7 +735,7 @@ def main():
                 --- ANÁLISIS COGNITIVO OBLIGATORIO (TAXONOMÍA DE BLOOM) ---
                 Antes de escribir el ítem, DEBES realizar el siguiente análisis interno para garantizar una alineación perfecta. La calidad de tu pregunta dependerá de la rigurosidad de este análisis.
                 
-                1.  **Deconstrucción del Proceso Cognitivo**: Revisa la "Descripción DETALLADA y VINCULANTE del proceso cognitivo" proporcionada. Es de carácter **obligatorio** que extraigas de ella el subproceso y los **verbos de acción clave** o sinónimos directos que mejor se alineen con la nanohabilidad '{nanohabilidad_elegida}'.
+                1.  **Deconstrucción del Proceso Cognitivo**: Revisa la "Descripción DETALLADA y VINCULANTE del proceso cognitivo" proporcionada. Es de carácter **obligatorio** que extraigas de ella el subproceso y los **verbos de acción clave** o sinónimos directos que mejor se alineen con la microhabilidad '{microhabilidad_elegida}'.
                 
                 2.  **Diseño de la Tarea Cognitiva**: Describe la tarea mental específica y observable que el estudiante DEBE realizar. **Esta descripción debe incorporar explícitamente los verbos de acción (o sus sinónimos directos) que identificaste en el paso anterior.** No describas la pregunta, sino la operación mental. (Ej: "La tarea exige que el estudiante *compare* dos eventos históricos para *detectar correspondencias* entre sus causas económicas, y luego *construya un modelo* simple de causa-efecto que *explique* esas similitudes.").
                 
@@ -756,7 +753,7 @@ def main():
                 --- INSTRUCCIONES PARA LA CONSTRUCCIÓN DEL ÍTEM ---
                 CONTEXTO DEL ÍTEM:
                 - Debe ser relevante y plausible, sirviendo como el escenario donde se ejecutará la Tarea Cognitiva que diseñaste.
-                - La temática debe ser la de la {estacion_elegida} y ser central para el problema.
+                - La temática debe ser la de la {macrohabilidad_elegida} y ser central para el problema.
                 - Evita referencias a marcas, nombres propios, lugares reales o información personal identificable.
                 
                 ENUNCIADO:
@@ -955,9 +952,9 @@ def main():
                     auditoria_json_str, full_auditor_prompt = auditar_item_con_llm(
                         audit_model_name,
                         item_generado=current_item_text,
-                        grado=grado_elegido, area=area_elegida, asignatura=asignatura_elegida, estacion=estacion_elegida,
-                        proceso_cognitivo=proceso_cognitivo_elegido, nanohabilidad=nanohabilidad_elegida,
-                        microhabilidad=microhabilidad_elegida, competencia_nanohabilidad=competencia_nanohabilidad_elegida,
+                        grado=grado_elegido, area=area_elegida, asignatura=asignatura_elegida, macrohabilidad=macrohabilidad_elegida,
+                        proceso_cognitivo=proceso_cognitivo_elegido,
+                        microhabilidad=microhabilidad_elegida, competencia_microhabilidad=competencia_microhabilidad_elegida,
                         contexto_educativo=contexto_educativo, manual_reglas_texto=manual_reglas_texto,
                         descripcion_bloom=descripcion_bloom,
                         grafico_necesario=grafico_necesario,
@@ -1237,11 +1234,10 @@ def main():
                 'GRADO': classification.get('GRADO'),
                 'ÁREA': classification.get('ÁREA'),
                 'ASIGNATURA': classification.get('ASIGNATURA'),
-                'ESTACIÓN': classification.get('ESTACIÓN'),
+                'MACROHABILIDAD': classification.get('MACROHABILIDAD'),
                 'PROCESO COGNITIVO': classification.get('PROCESO COGNITIVO'),
-                'NANOHABILIDAD': classification.get('NANOHABILIDAD'),
                 'MICROHABILIDAD': classification.get('MICROHABILIDAD'),
-                'COMPETENCIA NANOHABILIDAD': classification.get('COMPETENCIA NANOHABILIDAD'),
+                'COMPETENCIA MICROHABILIDAD': classification.get('COMPETENCIA MICROHABILIDAD'),
                 'Contexto': contexto,
                 'Enunciado': enunciado,
                 'Opcion_A': opcion_a_match.group(1).strip() if opcion_a_match else "",
@@ -1261,8 +1257,8 @@ def main():
     
         df = pd.DataFrame(datos_para_excel)
         
-        column_order = ['item', 'ID', 'GRADO', 'ÁREA', 'ASIGNATURA', 'ESTACIÓN', 'PROCESO COGNITIVO', 
-                        'NANOHABILIDAD', 'MICROHABILIDAD', 'COMPETENCIA NANOHABILIDAD',
+        column_order = ['item', 'ID', 'GRADO', 'ÁREA', 'ASIGNATURA', 'MACROHABILIDAD', 'PROCESO COGNITIVO', 
+                        'MICROHABILIDAD', 'COMPETENCIA MICROHABILIDAD',
                         'Contexto', 'Enunciado', 'Opcion_A', 'Opcion_B', 'Opcion_C', 'Opcion_D', 'Clave',
                         'Justificacion_A', 'Justificacion_B', 'Justificacion_C', 'Justificacion_D']
         df = df[column_order]
@@ -1325,30 +1321,30 @@ def main():
         asignatura_seleccionada = st.selectbox("Asignatura", sorted(all_asignaturas), key="asignatura_sel")
 
         df_filtrado_asignatura = df_filtrado_area[df_filtrado_area['ASIGNATURA'].astype(str).str.upper() == str(asignatura_seleccionada).upper()]
-        all_estaciones = df_filtrado_asignatura['ESTACIÓN'].dropna().unique().tolist()
-        estacion_seleccionada = st.selectbox("Estación", sorted(all_estaciones), key="estacion_sel")
+        all_macrohabilidades = df_filtrado_asignatura['MACROHABILIDAD'].dropna().unique().tolist()
+        macrohabilidad_seleccionada = st.selectbox("Macrohabilidad", sorted(all_macrohabilidades), key="macrohabilidad_sel")
     
         # --- LÓGICA DE CARGA Y GESTIÓN DE PROGRESO (CORREGIDA) ---
-        nombre_archivo_progreso = generar_nombre_archivo_progreso(grado_seleccionado, asignatura_seleccionada, estacion_seleccionada)
+        nombre_archivo_progreso = generar_nombre_archivo_progreso(grado_seleccionado, asignatura_seleccionada, macrohabilidad_seleccionada)
         
         # Verificamos si la lista de ítems aprobados no existe en la sesión y la creamos vacía.
         # ESTA ES LA LÍNEA CLAVE QUE SOLUCIONA EL ERROR.
         if 'approved_items' not in st.session_state:
             st.session_state['approved_items'] = []
         
-        # Ahora, gestionamos la carga de progreso si el usuario cambia de estación.
-        if st.session_state.get('current_station') != estacion_seleccionada:
-            # Si la estación cambió, cargamos el progreso desde GCS.
+        # Ahora, gestionamos la carga de progreso si el usuario cambia de macrohabilidad.
+        if st.session_state.get('current_station') != macrohabilidad_seleccionada:
+            # Si la macrohabilidad cambió, cargamos el progreso desde GCS.
             # Esto reemplazará la lista vacía con los ítems guardados, si existen.
             st.session_state['approved_items'] = cargar_progreso_desde_gcs(GCS_BUCKET_NAME, nombre_archivo_progreso)
             st.session_state['current_review_index'] = 0
             
-        # Finalmente, actualizamos la estación y nombre de archivo actuales en la sesión.
-        st.session_state['current_station'] = estacion_seleccionada
+        # Finalmente, actualizamos la macrohabilidad y nombre de archivo actuales en la sesión.
+        st.session_state['current_station'] = macrohabilidad_seleccionada
         st.session_state['nombre_archivo_progreso'] = nombre_archivo_progreso
         # --- FIN DE LA LÓGICA ---
         
-        df_filtrado_estacion = df_filtrado_asignatura[df_filtrado_asignatura['ESTACIÓN'].astype(str).str.upper() == str(estacion_seleccionada).upper()]
+        df_filtrado_macrohabilidad = df_filtrado_asignatura[df_filtrado_asignatura['MACROHABILIDAD'].astype(str).str.upper() == str(macrohabilidad_seleccionada).upper()]
         
         # --- ORDEN CORREGIDO: SECCIÓN MOVIDA HACIA ARRIBA ---
         st.markdown("---")
@@ -1371,10 +1367,10 @@ def main():
         # --- INICIO DE LA NUEVA LÓGICA DE SELECCIÓN MÚLTIPLE ---
 
         # Preparamos la lista de habilidades para mostrar en la interfaz
-        df_habilidades = df_filtrado_estacion[['ID', 'Numero', 'PROCESO COGNITIVO', 'NANOHABILIDAD', 'MICROHABILIDAD', 'COMPETENCIA NANOHABILIDAD']].drop_duplicates().reset_index(drop=True)
+        df_habilidades = df_filtrado_macrohabilidad[['ID', 'Numero', 'PROCESO COGNITIVO', 'MICROHABILIDAD', 'COMPETENCIA MICROHABILIDAD']].drop_duplicates().reset_index(drop=True)
         
         # Guardamos el dataframe de habilidades en el estado de la sesión para usarlo después
-        st.session_state['df_habilidades_estacion'] = df_habilidades
+        st.session_state['df_habilidades_macrohabilidad'] = df_habilidades
 
         # Creamos un diccionario para guardar las selecciones del usuario: {indice: cantidad}
         if 'selecciones_usuario' not in st.session_state:
@@ -1385,8 +1381,8 @@ def main():
         # --- CÓDIGO DE REEMPLAZO ---
         
         # --- Lógica de Contexto General (Opcional y Corregida Definitivamente) ---
-        contexto_general_estacion = ""
-        with st.expander("📝 Opcional: Generar un contexto general para la estación"):
+        contexto_general_macrohabilidad = ""
+        with st.expander("📝 Opcional: Generar un contexto general para la macrohabilidad"):
             
             # 1. Inicializamos la variable de estado principal si no existe. Esta será nuestra ÚNICA fuente de verdad.
             if 'generated_context' not in st.session_state:
@@ -1408,7 +1404,7 @@ def main():
             if categoria_elegida != "No usar contexto general":
                 if st.button("🧠 Generar Contexto con IA", key="btn_gen_ctx"):
                     with st.spinner("Generando contexto..."):
-                        contexto_sugerido = generar_contexto_general_con_llm(gen_model_name, grado_seleccionado, area_seleccionada, asignatura_seleccionada, estacion_seleccionada, tipo_contexto=tipo_contexto_final, idea_usuario=idea_usuario_ctx)
+                        contexto_sugerido = generar_contexto_general_con_llm(gen_model_name, grado_seleccionado, area_seleccionada, asignatura_seleccionada, macrohabilidad_seleccionada, tipo_contexto=tipo_contexto_final, idea_usuario=idea_usuario_ctx)
                         if contexto_sugerido:
                             # Al generar, actualizamos directamente nuestra única variable de estado.
                             st.session_state.generated_context = contexto_sugerido
@@ -1460,7 +1456,7 @@ def main():
                                     st.error("No se pudo refinar el contexto.")
         
             # La variable final simplemente lee el estado principal, que siempre está actualizado.
-            contexto_general_estacion = st.session_state.get('generated_context', "").strip()
+            contexto_general_macrohabilidad = st.session_state.get('generated_context', "").strip()
 
 
         descripcion_imagen_aprobada = ""
@@ -1524,8 +1520,8 @@ def main():
         # Creamos la interfaz interactiva para la selección
         for index, row in df_habilidades.iterrows():
             proceso = row['PROCESO COGNITIVO']
-            nano = row['NANOHABILIDAD']
-            label = f"**{proceso}** // {nano}"
+            micro = row['MICROHABILIDAD']
+            label = f"**{proceso}** // {micro}"
             
             # Usamos el índice como identificador único
             is_checked = st.checkbox(label, key=f"cb_{index}")
@@ -1545,7 +1541,7 @@ def main():
 
         # Definimos df_item_seleccionado como el dataframe completo para que la validación posterior funcione
         # La lógica real de selección se basa en 'selecciones_usuario'
-        df_item_seleccionado = df_filtrado_estacion.copy()
+        df_item_seleccionado = df_filtrado_macrohabilidad.copy()
         
         # --- FIN DE LA NUEVA LÓGICA DE SELECCIÓN MÚLTIPLE ---
         
@@ -1580,10 +1576,10 @@ def main():
 
                     # --- Construimos la nueva "cola de tareas" basada en la selección del usuario ---
                     items_para_procesar = []
-                    df_habilidades_estacion = st.session_state['df_habilidades_estacion']
+                    df_habilidades_macrohabilidad = st.session_state['df_habilidades_macrohabilidad']
 
                     for index, cantidad in st.session_state.selecciones_usuario.items():
-                        habilidad_seleccionada = df_habilidades_estacion.loc[index].to_dict()
+                        habilidad_seleccionada = df_habilidades_macrohabilidad.loc[index].to_dict()
                         for _ in range(cantidad):
                             items_para_procesar.append(habilidad_seleccionada)
                     
@@ -1634,7 +1630,7 @@ def main():
                         # 3. EJECUTA TU PROCESO LARGO (La generación de la IA)
                         item_spec_row = items_pendientes[current_index]
                         current_fila_datos = {
-                            'GRADO': grado_seleccionado, 'ÁREA': area_seleccionada, 'ASIGNATURA': asignatura_seleccionada, 'ESTACIÓN': estacion_seleccionada,
+                            'GRADO': grado_seleccionado, 'ÁREA': area_seleccionada, 'ASIGNATURA': asignatura_seleccionada, 'MACROHABILIDAD': macrohabilidad_seleccionada,
                             **item_spec_row
                         }
                         criterios_para_preguntas = {"tipo_pregunta": "opción múltiple con 4 opciones", "dificultad": "media", "contexto_educativo": "estudiantes Colombianos entre 10 y 17 años"}
@@ -1642,7 +1638,7 @@ def main():
                         item_to_review = generar_pregunta_con_seleccion(
                             gen_model_name, audit_model_name, fila_datos=current_fila_datos,
                             criterios_generacion=criterios_para_preguntas, manual_reglas_texto=manual_reglas_texto,
-                            contexto_general_estacion=contexto_general_estacion,
+                            contexto_general_macrohabilidad=contexto_general_macrohabilidad,
                             prompt_bloom_adicional=prompt_bloom_adicional, prompt_construccion_adicional=prompt_construccion_adicional,
                             prompt_especifico_adicional=prompt_especifico_adicional, prompt_auditor_adicional=prompt_auditor_adicional, descripcion_imagen_aprobada=descripcion_imagen_aprobada
                         )
@@ -1887,7 +1883,7 @@ def main():
                     st.subheader(f"✅ Ítems Aprobados: {len(st.session_state.approved_items)}")
                     st.success("Todos los ítems seleccionados han sido procesados. Ahora puedes exportarlos.")
 
-                    nombre_archivo_zip = f"items_{estacion_seleccionada.replace(' ', '_')}.zip"
+                    nombre_archivo_zip = f"items_{macrohabilidad_seleccionada.replace(' ', '_')}.zip"
                     
                     zip_buffer = exportar_a_zip(st.session_state.approved_items)
                     st.download_button(
@@ -1899,7 +1895,7 @@ def main():
                     )
                                         
                     st.write("")
-                    nombre_base = estacion_seleccionada.replace(' ', '_').lower()
+                    nombre_base = macrohabilidad_seleccionada.replace(' ', '_').lower()
                     excel_buffer = exportar_a_excel(st.session_state.approved_items, nombre_base)
                     nombre_archivo_excel = f"items_aprobados_{nombre_base}.xlsx"
                     if excel_buffer:
@@ -1928,7 +1924,7 @@ def main():
                         st.download_button(
                             label="📥 Descargar Prompts (.txt)",
                             data=combined_prompts_content.encode('utf-8'),
-                            file_name=f"prompts_{estacion_seleccionada.replace(' ', '_')}.txt",
+                            file_name=f"prompts_{macrohabilidad_seleccionada.replace(' ', '_')}.txt",
                             mime="text/plain",
                             use_container_width=True
                         )
