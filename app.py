@@ -71,10 +71,10 @@ def load_bloom_taxonomy(file_path="bloom_taxonomy.json"):
 bloom_taxonomy_detallada = load_bloom_taxonomy()
 
 # --- REEMPLAZA ESTA FUNCIÓN ---
-def crear_indice_vectorial(paginas_texto):
+def crear_indice_vectorial(paginas_con_metadata):
     """
-    Convierte una lista de TEXTOS DE PÁGINA en chunks y vectores.
-    Procesa página por página para ahorrar RAM.
+    Convierte una lista de tuplas (TEXTO_PAGINA, METADATA) en chunks y vectores.
+    Procesa página por página para ahorrar RAM y preserva los metadatos.
     """
     try:
         model = TextEmbeddingModel.from_pretrained("text-embedding-004")
@@ -83,16 +83,13 @@ def crear_indice_vectorial(paginas_texto):
             chunk_overlap=100
         )
         
-        index = []
+        index = [] # El índice ahora guardará (chunk, vector, metadata)
         
-        # --- AQUÍ ESTÁ EL CAMBIO ---
-        # Reducimos el tamaño del lote de 250 a 100.
-        # Esto asegura que no superemos el límite de 20k tokens por llamada.
-        api_batch_size = 100 
-        # --- FIN DEL CAMBIO ---
+        api_batch_size = 100  
 
-        # Iteramos sobre CADA PÁGINA individualmente
-        for texto_pagina in paginas_texto:
+        # Iteramos sobre CADA PÁGINA y sus METADATOS
+        for texto_pagina, metadata in paginas_con_metadata:
+            
             # 1. Dividimos solo el texto de ESTA página
             chunks_pagina = text_splitter.split_text(texto_pagina)
             
@@ -102,65 +99,106 @@ def crear_indice_vectorial(paginas_texto):
             # 2. Vectorizamos los chunks de ESTA página (en lotes si es necesario)
             for i in range(0, len(chunks_pagina), api_batch_size):
                 batch_chunks = chunks_pagina[i:i + api_batch_size]
-                embeddings = model.get_embeddings(batch_chunks)
                 
+                try:
+                    embeddings = model.get_embeddings(batch_chunks)
+                except Exception as e:
+                    # Si falla un lote (ej. texto vacío o inválido), lo saltamos
+                    st.warning(f"No se pudieron generar embeddings para un lote: {e}")
+                    continue
+                    
                 for chunk, embedding in zip(batch_chunks, embeddings):
-                    index.append((chunk, np.array(embedding.values)))
-            
-            # 3. Al final de este bucle, 'texto_pagina' y 'chunks_pagina' se liberan
-            # de la memoria antes de procesar la siguiente página.
-    
+                    # 3. --- MODIFICACIÓN CLAVE ---
+                    # Guardamos el chunk, su vector Y los metadatos de su página de origen
+                    index.append((chunk, np.array(embedding.values), metadata))
+        
         return index
     
     except Exception as e:
-        # ¡Este es el error que estás viendo ahora!
         st.error(f"Error al crear vectores (Embeddings): {e}")
         return []
 
-def buscar_en_indice(query_text, k=3):
-        """
-        Busca en el índice de sesión los k chunks más relevantes para un texto.
-        Devuelve una lista de los textos (chunks) encontrados.
-        """
-        if 'pdf_index' not in st.session_state or not st.session_state['pdf_index']:
-            return [] # No hay índice cargado
-
-        index = st.session_state['pdf_index']
-        
-        try:
-            # 1. Vectorizar la consulta (la microhabilidad)
-            model = TextEmbeddingModel.from_pretrained("text-embedding-004")
-            query_vector = np.array(model.get_embeddings([query_text])[0].values)
-            
-            # 2. Calcular similitud (Coseno)
-            # Preparamos los vectores del índice
-            chunk_vectors = np.array([item[1] for item in index])
-            
-            # Normalizamos vectores
-            query_norm = np.linalg.norm(query_vector)
-            chunk_norms = np.linalg.norm(chunk_vectors, axis=1)
-            
-            # Evitar división por cero si hay vectores nulos
-            if query_norm == 0 or np.any(chunk_norms == 0):
-                return []
-                
-            # Calculamos la similitud del coseno
-            # (A . B) / (||A|| * ||B||)
-            similitudes = np.dot(chunk_vectors, query_vector) / (chunk_norms * query_norm)
-            
-            # 3. Obtener los Top K
-            # `np.argsort` da los índices de menor a mayor. Usamos `[-k:]` para los k más altos
-            # y `[::-1]` para invertirlos (del más al menos relevante).
-            top_k_indices = np.argsort(similitudes)[-k:][::-1]
-            
-            # 4. Devolver los textos de esos chunks
-            relevant_chunks = [index[i][0] for i in top_k_indices]
-            return relevant_chunks
-
-        except Exception as e:
-            st.warning(f"Error al buscar en el índice del PDF: {e}")
-            return []
+def buscar_en_indice(query_text, k=3, filter_metadata=None):
+    """
+    Busca en el índice de sesión los k chunks más relevantes para un texto.
     
+    --- MODIFICACIÓN CLAVE ---
+    Ahora puede pre-filtrar el índice usando 'filter_metadata'.
+    'filter_metadata' debe ser un dict, ej: {'seccion': 'adquisicion'}
+    """
+    if 'pdf_index' not in st.session_state or not st.session_state['pdf_index']:
+        return [] # No hay índice cargado
+
+    full_index = st.session_state['pdf_index']
+    
+    # 1. --- NUEVO: Filtrado por Metadatos ---
+    if filter_metadata and isinstance(filter_metadata, dict):
+        filtered_index = []
+        for chunk, vector, metadata in full_index:
+            # Comprueba si todos los items del filtro están en los metadatos
+            match = True
+            for key, value in filter_metadata.items():
+                if metadata.get(key) != value:
+                    match = False
+                    break
+            if match:
+                filtered_index.append((chunk, vector, metadata))
+        
+        # Si el filtro no devuelve nada, no podemos buscar
+        if not filtered_index:
+            return []
+        index_to_search = filtered_index
+    else:
+        # Si no hay filtro, usamos el índice completo
+        index_to_search = full_index
+
+    try:
+        # 2. Vectorizar la consulta
+        model = TextEmbeddingModel.from_pretrained("text-embedding-004")
+        query_vector = np.array(model.get_embeddings([query_text])[0].values)
+        
+        # 3. Calcular similitud (Coseno)
+        # Preparamos los vectores del índice FILTRADO
+        chunk_vectors = np.array([item[1] for item in index_to_search])
+        
+        # Normalizamos vectores
+        query_norm = np.linalg.norm(query_vector)
+        chunk_norms = np.linalg.norm(chunk_vectors, axis=1)
+        
+        # Evitar división por cero
+        # Creamos un mask para los norms que no son cero
+        valid_indices = (query_norm != 0) & (chunk_norms != 0)
+        
+        if not np.any(valid_indices):
+            return [] # No hay vectores válidos para comparar
+            
+        # Filtramos los vectores y normas que son válidos
+        chunk_vectors_valid = chunk_vectors[valid_indices]
+        chunk_norms_valid = chunk_norms[valid_indices]
+        
+        # Calculamos similitudes solo para los válidos
+        similitudes = np.dot(chunk_vectors_valid, query_vector) / (chunk_norms_valid * query_norm)
+        
+        # 4. Obtener los Top K
+        # `np.argsort` da los índices de menor a mayor. Usamos `[-k:]` para los k más altos
+        # y `[::-1]` para invertirlos (del más al menos relevante).
+        # Esto nos da los *índices dentro de la lista filtrada*
+        top_k_indices_in_filtered = np.argsort(similitudes)[-k:][::-1]
+        
+        # Mapeamos los índices de vuelta al índice original (el index_to_search)
+        # Primero, obtenemos los índices de los chunks válidos
+        original_valid_indices = np.where(valid_indices)[0]
+        
+        # Luego, usamos los top_k_indices para seleccionar de esos índices válidos
+        top_k_original_indices = [original_valid_indices[i] for i in top_k_indices_in_filtered]
+        
+        # 5. Devolver los textos de esos chunks
+        relevant_chunks = [index_to_search[i][0] for i in top_k_original_indices]
+        return relevant_chunks
+
+    except Exception as e:
+        st.warning(f"Error al buscar en el índice del PDF: {e}")
+        return []
 
 def load_lottieurl(url: str):
     r = requests.get(url)
@@ -224,19 +262,61 @@ def extraer_texto_pdf(pdf_bytes):
     """
     Extrae texto de un PDF en bytes USANDO PyMuPDF (fitz),
     que es mucho más rápido y robusto que PyPDF2.
+    
+    --- MODIFICACIÓN CLAVE ---
+    Esta función ahora también identifica la estructura (Estación, Adquisición, Apropiación)
+    y devuelve una LISTA DE TUPLAS, donde cada tupla contiene:
+    (texto_de_la_pagina, metadata_dict)
     """
+    paginas_con_metadata = []
+    
+    # Expresiones regulares para identificar nuestros encabezados clave
+    # \s* permite espacios, (.*?) captura el texto, (?=\n|$) asegura que termine en un salto de línea
+    re_estacion = re.compile(r"Estación\s*(\d+)\s*(.*?)(?=\n|$)", re.IGNORECASE)
+    re_adquisicion = re.compile(r"\d+\s*Adquisición", re.IGNORECASE)
+    re_apropiacion = re.compile(r"\d+\s*Apropiación", re.IGNORECASE)
+    re_lectura = re.compile(r"\d+\s*Lectura crítica", re.IGNORECASE)
+
+    current_estacion = "N/A"
+    current_seccion = "general" # Sección por defecto (ej. carátula, índice)
+
     try:
-        texto_pdf = ""
-        # Abrir el PDF desde los bytes en memoria
         with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
-            for page in doc:
-                # .get_text() es el método de PyMuPDF
-                texto_pdf += page.get_text() + "\n\n" 
-        return texto_pdf
+            for i, page in enumerate(doc):
+                texto_pagina = page.get_text()
+                if not texto_pagina.strip():
+                    continue
+
+                # 1. Detectar cambios de Estación
+                match_estacion = re_estacion.search(texto_pagina)
+                if match_estacion:
+                    current_estacion = f"Estación {match_estacion.group(1)}"
+                    # Si encontramos una estación, reseteamos la sección
+                    current_seccion = "general" 
+
+                # 2. Detectar cambios de Sección (Adquisición, Apropiación, etc.)
+                if re_lectura.search(texto_pagina):
+                    current_seccion = "lectura_critica"
+                elif re_adquisicion.search(texto_pagina):
+                    current_seccion = "adquisicion"
+                elif re_apropiacion.search(texto_pagina):
+                    current_seccion = "apropiacion"
+                
+                # 3. Crear el diccionario de metadatos para esta página
+                metadata = {
+                    "pagina": i + 1,
+                    "estacion": current_estacion,
+                    "seccion": current_seccion
+                }
+                
+                # 4. Añadir el texto y sus metadatos a la lista
+                paginas_con_metadata.append( (texto_pagina, metadata) )
+                
     except Exception as e:
-        # Aún mantenemos el st.error por si el PDF está dañado
         st.error(f"Error al leer el PDF con PyMuPDF: {e}")
-        return None
+        return []
+
+    return paginas_con_metadata
 
 
 
